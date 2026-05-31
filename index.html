@@ -788,11 +788,10 @@
     }
 
     async function callGasWebApp(action, payload = {}) {
-        const body = new URLSearchParams({ action, ...payload });
-        const res = await fetch(GAS_URL, {
+        const res = await fetch('/api/gas', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-            body
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, payload })
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
