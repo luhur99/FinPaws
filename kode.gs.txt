@@ -27,6 +27,48 @@ function doPost(e) {
       return jsonResponse(saveUserSetup(username, mascotObj));
     }
 
+    if (action === "saveTransaction") {
+      const username = (e.parameter.username || "").trim();
+      const txRaw = e.parameter.txData || "";
+      let txObj = null;
+
+      try {
+        txObj = JSON.parse(txRaw);
+      } catch (err) {
+        return jsonResponse({ status: "error", message: "Format transaksi tidak valid." });
+      }
+
+      return jsonResponse(saveTransaction(username, txObj));
+    }
+
+    if (action === "saveReminder") {
+      const username = (e.parameter.username || "").trim();
+      const reminderRaw = e.parameter.reminderData || "";
+      let reminderObj = null;
+
+      try {
+        reminderObj = JSON.parse(reminderRaw);
+      } catch (err) {
+        return jsonResponse({ status: "error", message: "Format reminder tidak valid." });
+      }
+
+      return jsonResponse(saveReminder(username, reminderObj));
+    }
+
+    if (action === "completeReminder") {
+      const username = (e.parameter.username || "").trim();
+      const reminderRaw = e.parameter.reminderData || "";
+      let reminderObj = null;
+
+      try {
+        reminderObj = JSON.parse(reminderRaw);
+      } catch (err) {
+        return jsonResponse({ status: "error", message: "Format reminder selesai tidak valid." });
+      }
+
+      return jsonResponse(completeReminder(username, reminderObj));
+    }
+
     return jsonResponse({ status: "error", message: "Action tidak dikenali." });
   } catch (err) {
     return jsonResponse({ status: "error", message: "Server error: " + err.message });
@@ -75,8 +117,10 @@ function setupDatabase() {
   let remSheet = ss.getSheetByName("Reminders");
   if (!remSheet) {
     remSheet = ss.insertSheet("Reminders");
-    remSheet.appendRow(["rem_id", "username", "judul", "tipe", "jatuh_tempo"]);
+    remSheet.appendRow(["rem_id", "username", "judul", "tipe", "jatuh_tempo", "status", "recurring", "recurring_type", "recurring_days", "completed_count", "on_time_count", "last_completed_at"]);
     remSheet.setFrozenRows(1);
+  } else {
+    ensureReminderColumns(remSheet);
   }
 
   return "Setup Sukses! Sheet sudah dibuat.";
@@ -128,8 +172,10 @@ function saveUserSetup(username, mascotObj) {
 
 // Fungsi dummy untuk menyimpan transaksi dari frontend ke sheet
 function saveTransaction(username, txData) {
+  if (!username) return { status: 'error', message: 'Username wajib diisi' };
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const txSheet = ss.getSheetByName("Transactions");
+  if (!txSheet) return { status: 'error', message: 'Sheet Transactions tidak ditemukan' };
   
   txSheet.appendRow([
     txData.id,
@@ -143,4 +189,71 @@ function saveTransaction(username, txData) {
   ]);
   
   return { status: 'success' };
+}
+
+function ensureReminderColumns(remSheet) {
+  const required = [
+    "rem_id", "username", "judul", "tipe", "jatuh_tempo", "status", "recurring",
+    "recurring_type", "recurring_days", "completed_count", "on_time_count", "last_completed_at"
+  ];
+
+  const headerRange = remSheet.getRange(1, 1, 1, Math.max(remSheet.getLastColumn(), 1));
+  const existing = headerRange.getValues()[0].map(String);
+
+  if (existing.length === 1 && existing[0] === "") {
+    remSheet.getRange(1, 1, 1, required.length).setValues([required]);
+    remSheet.setFrozenRows(1);
+    return;
+  }
+
+  let appendFrom = existing.length + 1;
+  for (var i = existing.length; i < required.length; i++) {
+    remSheet.getRange(1, appendFrom).setValue(required[i]);
+    appendFrom++;
+  }
+}
+
+function saveReminder(username, reminderData) {
+  if (!username) return { status: 'error', message: 'Username wajib diisi' };
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const remSheet = ss.getSheetByName("Reminders");
+  if (!remSheet) return { status: 'error', message: 'Sheet Reminders tidak ditemukan' };
+
+  ensureReminderColumns(remSheet);
+
+  const data = remSheet.getDataRange().getValues();
+  const remId = String(reminderData.id || "");
+  if (!remId) return { status: 'error', message: 'Reminder ID wajib ada' };
+
+  const rowValues = [
+    remId,
+    username,
+    reminderData.judul || "",
+    reminderData.tipe || "Tagihan",
+    reminderData.tgl || "",
+    reminderData.status || "open",
+    reminderData.recurring ? "TRUE" : "FALSE",
+    reminderData.recurringType || "monthly",
+    reminderData.recurringDays || "",
+    reminderData.completedCount || 0,
+    reminderData.onTimeCount || 0,
+    reminderData.lastCompletedAt || ""
+  ];
+
+  for (var i = 1; i < data.length; i++) {
+    const rowId = String(data[i][0] || "");
+    const rowUser = String(data[i][1] || "");
+    if (rowId === remId && rowUser === username) {
+      remSheet.getRange(i + 1, 1, 1, rowValues.length).setValues([rowValues]);
+      return { status: 'success', mode: 'updated' };
+    }
+  }
+
+  remSheet.appendRow(rowValues);
+  return { status: 'success', mode: 'inserted' };
+}
+
+function completeReminder(username, reminderData) {
+  return saveReminder(username, reminderData);
 }
