@@ -54,7 +54,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const gasUrl = process.env.GAS_URL || DEFAULT_GAS_URL;
+  const gasUrl = DEFAULT_GAS_URL;
 
   try {
     const response = await fetch(gasUrl, {

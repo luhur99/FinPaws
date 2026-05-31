@@ -793,7 +793,16 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, payload })
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            let detail = `HTTP ${res.status}`;
+            try {
+                const errorBody = await res.json();
+                detail = errorBody.detail || errorBody.message || detail;
+            } catch (_err) {
+                // Ignore JSON parsing errors and keep generic HTTP detail.
+            }
+            throw new Error(detail);
+        }
         return res.json();
     }
     
@@ -944,7 +953,7 @@
                 .catch((err) => {
                     showLoader(false);
                     console.error('GAS login error:', err);
-                    showToast('Gagal konek ke GAS. Cek deployment & izin Web App.', 'error');
+                    showToast(`Gagal konek ke GAS: ${err.message}`, 'error');
                 });
         }
     });
