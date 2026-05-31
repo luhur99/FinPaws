@@ -1,5 +1,27 @@
 const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwTztGw-G9IMjWHTwbJK_Fv4SUJbdHeVAFPQnmqkxJks034SY2xBg0uonhY3nplqSfo/exec";
 
+function tryParseGasJson(text) {
+  if (!text) return null;
+
+  const trimmed = text.trim().replace(/^\)\]\}'\s*/, "");
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (_err) {
+    const firstBrace = trimmed.indexOf("{");
+    const lastBrace = trimmed.lastIndexOf("}");
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      const candidate = trimmed.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch (_err2) {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
 function toFormBody(action, payload) {
   const params = new URLSearchParams();
   params.set("action", action);
@@ -23,8 +45,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  const action = req.body && req.body.action;
-  const payload = (req.body && req.body.payload) || {};
+  const parsedBody = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+  const action = parsedBody.action;
+  const payload = parsedBody.payload || {};
 
   if (!action) {
     res.status(400).json({ status: "error", message: "Missing action" });
@@ -43,15 +66,19 @@ export default async function handler(req, res) {
     });
 
     const text = await response.text();
-    let data;
+    const parsed = tryParseGasJson(text);
 
-    try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
+    let data = parsed;
+    if (!data) {
+      const snippet = text.replace(/\s+/g, " ").slice(0, 300);
+      const likelyHtml = /^\s*</.test(text);
       data = {
         status: "error",
         message: "Invalid GAS response",
-        raw: text
+        detail: likelyHtml
+          ? "GAS merespons HTML (biasanya deployment/permission belum benar)."
+          : "GAS merespons non-JSON.",
+        rawSnippet: snippet
       };
     }
 
@@ -61,6 +88,11 @@ export default async function handler(req, res) {
         message: `GAS HTTP ${response.status}`,
         data
       });
+      return;
+    }
+
+    if (!parsed) {
+      res.status(502).json(data);
       return;
     }
 
