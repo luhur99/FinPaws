@@ -1,0 +1,146 @@
+function doGet(e) {
+  // Health check endpoint
+  return jsonResponse({ status: "success", message: "FinPaws API is Running!" });
+}
+
+function doPost(e) {
+  try {
+    const action = (e && e.parameter && e.parameter.action) ? e.parameter.action : "";
+
+    if (action === "doLogin") {
+      const user = (e.parameter.user || "").trim();
+      const pass = (e.parameter.pass || "").trim();
+      return jsonResponse(doLogin(user, pass));
+    }
+
+    if (action === "saveUserSetup") {
+      const username = (e.parameter.username || "").trim();
+      const mascotRaw = e.parameter.mascot || "";
+      let mascotObj = null;
+
+      try {
+        mascotObj = JSON.parse(mascotRaw);
+      } catch (err) {
+        return jsonResponse({ status: "error", message: "Format mascot tidak valid." });
+      }
+
+      return jsonResponse(saveUserSetup(username, mascotObj));
+    }
+
+    return jsonResponse({ status: "error", message: "Action tidak dikenali." });
+  } catch (err) {
+    return jsonResponse({ status: "error", message: "Server error: " + err.message });
+  }
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function setupDatabase() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // 1. Sheet Users
+  let userSheet = ss.getSheetByName("Users");
+  if (!userSheet) {
+    userSheet = ss.insertSheet("Users");
+    userSheet.appendRow(["user_id", "username", "password", "mascot_json"]);
+    userSheet.setFrozenRows(1);
+    userSheet.getRange("A1:D1").setFontWeight("bold").setBackground("#6c5ce7").setFontColor("white");
+    
+    // Insert dummy user (Admin & Peserta Baru)
+    userSheet.appendRow(["U-001", "admin", "edudigital", JSON.stringify({hewan:"anjing", ikon:"🐶", tema:"theme-anjing", nama:"Doggo"})]);
+    userSheet.appendRow(["U-002", "peserta", "edudigital", ""]); // Mascot kosong = butuh setup
+  }
+
+  // 2. Sheet Transactions
+  let txSheet = ss.getSheetByName("Transactions");
+  if (!txSheet) {
+    txSheet = ss.insertSheet("Transactions");
+    txSheet.appendRow(["trans_id", "username", "tanggal", "tipe", "kategori", "nominal", "keterangan", "foto_base64"]);
+    txSheet.setFrozenRows(1);
+    txSheet.getRange("A1:H1").setFontWeight("bold").setBackground("#6c5ce7").setFontColor("white");
+  }
+
+  // 3. Sheet Wishlists & Reminders (Opsional, untuk pengembangan fitur simpan cloud)
+  let wishSheet = ss.getSheetByName("Wishlists");
+  if (!wishSheet) {
+    wishSheet = ss.insertSheet("Wishlists");
+    wishSheet.appendRow(["wish_id", "username", "nama_target", "target_nominal", "terkumpul"]);
+    wishSheet.setFrozenRows(1);
+  }
+
+  let remSheet = ss.getSheetByName("Reminders");
+  if (!remSheet) {
+    remSheet = ss.insertSheet("Reminders");
+    remSheet.appendRow(["rem_id", "username", "judul", "tipe", "jatuh_tempo"]);
+    remSheet.setFrozenRows(1);
+  }
+
+  return "Setup Sukses! Sheet sudah dibuat.";
+}
+
+function doLogin(username, password) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const userSheet = ss.getSheetByName("Users");
+  
+  if (!userSheet) return { status: 'error', message: 'Database belum di-setup. Jalankan setupDatabase() di GAS.' };
+
+  const data = userSheet.getDataRange().getValues();
+  // Loop data dari baris ke-2 (skip header)
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1] === username && data[i][2] === password) {
+      
+      let mascotData = null;
+      if (data[i][3]) {
+        try { mascotData = JSON.parse(data[i][3]); } catch (e) { }
+      }
+
+      return {
+        status: 'success',
+        data: {
+          username: data[i][1],
+          isNew: mascotData === null,
+          mascot: mascotData
+        }
+      };
+    }
+  }
+  return { status: 'error', message: 'Username atau Password salah ngab!' };
+}
+
+function saveUserSetup(username, mascotObj) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const userSheet = ss.getSheetByName("Users");
+  const data = userSheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][1] === username) {
+      // Update cell mascot_json
+      userSheet.getRange(i + 1, 4).setValue(JSON.stringify(mascotObj));
+      return { status: 'success' };
+    }
+  }
+  return { status: 'error', message: 'User tidak ditemukan' };
+}
+
+// Fungsi dummy untuk menyimpan transaksi dari frontend ke sheet
+function saveTransaction(username, txData) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const txSheet = ss.getSheetByName("Transactions");
+  
+  txSheet.appendRow([
+    txData.id,
+    username,
+    txData.tgl,
+    txData.tipe,
+    txData.kategori,
+    txData.nominal,
+    txData.ket,
+    txData.fotoUrl || ""
+  ]);
+  
+  return { status: 'success' };
+}
