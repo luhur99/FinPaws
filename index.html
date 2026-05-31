@@ -400,12 +400,69 @@
         }
 
         .rem-item {
-            display: flex; align-items: center; padding: 20px; background: #fffbeb;
-            border: 2px solid #fde68a; border-radius: 20px; margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 16px;
+            background: #fffbeb;
+            border: 2px solid #fde68a;
+            border-radius: 20px;
+            margin-bottom: 15px;
         }
-        .rem-icon { font-size: 1.8rem; color: #f59e0b; margin-right: 15px; }
+        .rem-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+            flex: 1;
+        }
+        .rem-icon { font-size: 1.8rem; color: #f59e0b; }
         .rem-info h4 { font-size: 1.05rem; font-weight: 800; margin-bottom: 5px; color: #92400e; }
         .rem-info p { font-size: 0.85rem; font-weight: 600; color: #b45309; }
+        .rem-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .rem-pill {
+            font-size: 0.72rem;
+            font-weight: 900;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(245, 158, 11, 0.15);
+            color: #92400e;
+        }
+        .rem-pill.overdue {
+            background: rgba(239, 68, 68, 0.15);
+            color: #b91c1c;
+        }
+        .btn-rem-done {
+            border: none;
+            border-radius: 12px;
+            background: var(--success);
+            color: white;
+            padding: 10px 12px;
+            font-size: 0.8rem;
+            font-weight: 900;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .recurring-row {
+            display: grid;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .recurring-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: var(--text-main);
+        }
 
         .dash-reminder-wrap {
             display: grid;
@@ -843,6 +900,21 @@
                         </select>
                         <input type="date" id="remDate" class="form-control" style="flex:1;" required>
                     </div>
+                    <div class="recurring-row">
+                        <label class="recurring-toggle">
+                            <input type="checkbox" id="remRecurring">
+                            Tanggungan recurring (berulang)
+                        </label>
+                        <div id="recurringFields" class="hidden" style="display:flex; gap:10px;">
+                            <select id="remRecurringType" class="form-control" style="flex:1;">
+                                <option value="weekly">Mingguan</option>
+                                <option value="monthly" selected>Bulanan</option>
+                                <option value="quarterly">3 Bulan</option>
+                                <option value="custom">Custom Hari</option>
+                            </select>
+                            <input type="number" id="remRecurringDays" class="form-control hidden" min="1" max="365" placeholder="Hari" style="max-width:110px;">
+                        </div>
+                    </div>
                     <button type="submit" class="btn btn-primary">Set Reminder</button>
                 </form>
             </div>
@@ -1013,7 +1085,7 @@
                     currentUser = parsed.currentUser;
                     transactions = parsed.transactions || [];
                     wishlists = parsed.wishlists || [];
-                    reminders = parsed.reminders || [];
+                    reminders = (parsed.reminders || []).map(normalizeReminder).filter(Boolean);
                     uiMode = parsed.uiMode || 'light';
                     appSettings = normalizeSettings(parsed.appSettings);
                     console.log('✓ Data loaded from localStorage');
@@ -1155,6 +1227,7 @@
         // Set default dates
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('txDate').value = today;
+        document.getElementById('remDate').value = today;
         document.getElementById('lapMulai').value = new Date(new Date().setDate(1)).toISOString().split('T')[0]; 
         document.getElementById('lapSampai').value = today;
 
@@ -1167,6 +1240,21 @@
                 let fileName = e.target.files[0] ? e.target.files[0].name : "Upload / Jepret Struk";
                 if(fileName.length > 20) fileName = fileName.substring(0,17) + "...";
                 document.getElementById('fileNameDisplay').innerText = fileName;
+            });
+        }
+
+        const recurringCheckbox = document.getElementById('remRecurring');
+        const recurringType = document.getElementById('remRecurringType');
+        const recurringFields = document.getElementById('recurringFields');
+        const recurringDays = document.getElementById('remRecurringDays');
+        if (recurringCheckbox && recurringType && recurringFields && recurringDays) {
+            recurringCheckbox.addEventListener('change', () => {
+                recurringFields.classList.toggle('hidden', !recurringCheckbox.checked);
+                if (!recurringCheckbox.checked) recurringDays.classList.add('hidden');
+            });
+            recurringType.addEventListener('change', () => {
+                recurringDays.classList.toggle('hidden', recurringType.value !== 'custom');
+                if (recurringType.value === 'custom' && !recurringDays.value) recurringDays.value = 30;
             });
         }
 
@@ -1256,6 +1344,88 @@
         return Math.round((target - today) / (1000 * 60 * 60 * 24));
     }
 
+    function normalizeReminder(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        return {
+            id: raw.id || Date.now(),
+            judul: raw.judul || 'Tanpa judul',
+            tipe: raw.tipe || 'Tagihan',
+            tgl: raw.tgl || new Date().toISOString().split('T')[0],
+            status: raw.status || 'open',
+            recurring: !!raw.recurring,
+            recurringType: raw.recurringType || 'monthly',
+            recurringDays: Number(raw.recurringDays) > 0 ? Number(raw.recurringDays) : null,
+            completedCount: Number(raw.completedCount) || 0,
+            onTimeCount: Number(raw.onTimeCount) || 0,
+            lastCompletedAt: raw.lastCompletedAt || null
+        };
+    }
+
+    function getOpenReminders() {
+        return reminders
+            .map(normalizeReminder)
+            .filter(Boolean)
+            .filter(r => r.status !== 'done');
+    }
+
+    function formatRecurrenceLabel(rem) {
+        if (!rem.recurring) return '';
+        if (rem.recurringType === 'weekly') return 'Recurring: Mingguan';
+        if (rem.recurringType === 'quarterly') return 'Recurring: 3 Bulan';
+        if (rem.recurringType === 'custom') return `Recurring: ${rem.recurringDays || 30} Hari`;
+        return 'Recurring: Bulanan';
+    }
+
+    function computeNextDueDate(rem) {
+        const base = new Date(rem.tgl);
+        base.setHours(0, 0, 0, 0);
+
+        if (rem.recurringType === 'weekly') {
+            base.setDate(base.getDate() + 7);
+        } else if (rem.recurringType === 'quarterly') {
+            base.setMonth(base.getMonth() + 3);
+        } else if (rem.recurringType === 'custom') {
+            const days = Number(rem.recurringDays) > 0 ? Number(rem.recurringDays) : 30;
+            base.setDate(base.getDate() + days);
+        } else {
+            base.setMonth(base.getMonth() + 1);
+        }
+
+        return base.toISOString().split('T')[0];
+    }
+
+    function completeReminder(reminderId) {
+        const idx = reminders.findIndex(r => String(r.id) === String(reminderId));
+        if (idx < 0) return;
+
+        const rem = normalizeReminder(reminders[idx]);
+        const diff = getReminderDiffDays(rem.tgl);
+        const onTime = diff !== null && diff >= 0;
+        const today = new Date().toISOString().split('T')[0];
+
+        rem.completedCount += 1;
+        if (onTime) rem.onTimeCount += 1;
+        rem.lastCompletedAt = today;
+
+        if (rem.recurring) {
+            rem.tgl = computeNextDueDate(rem);
+            rem.status = 'open';
+            reminders[idx] = rem;
+            showToast(`Pembayaran selesai. Reminder recurring berikutnya: ${rem.tgl}`, 'success');
+        } else {
+            rem.status = 'done';
+            reminders[idx] = rem;
+            showToast('Tanggungan diselesaikan. Tidak muncul lagi di dashboard/list.', 'success');
+        }
+
+        Storage.save();
+        renderReminders();
+        renderDashboardReminders();
+        if (document.getElementById('pageLaporan').classList.contains('active')) {
+            loadLaporan();
+        }
+    }
+
     function renderDashboardReminders() {
         const box = document.getElementById('dashboardReminderAlerts');
         if (!box) return;
@@ -1264,7 +1434,7 @@
         const dueToday = [];
         const dueSoon = [];
 
-        reminders.forEach(r => {
+        getOpenReminders().forEach(r => {
             const diff = getReminderDiffDays(r.tgl);
             if (diff === null || diff < 0) return;
             if (diff === 0) dueToday.push({ ...r, diff });
@@ -1673,19 +1843,55 @@
     // --- REMINDER ---
     document.getElementById('formReminder').addEventListener('submit', function(e) {
         e.preventDefault();
-        reminders.push({ id: Date.now(), judul: document.getElementById('remJudul').value, tipe: document.getElementById('remTipe').value, tgl: document.getElementById('remDate').value });
+        const recurring = document.getElementById('remRecurring').checked;
+        const recurringType = document.getElementById('remRecurringType').value;
+        const recurringDays = Number(document.getElementById('remRecurringDays').value) || null;
+        reminders.push(normalizeReminder({
+            id: Date.now(),
+            judul: document.getElementById('remJudul').value,
+            tipe: document.getElementById('remTipe').value,
+            tgl: document.getElementById('remDate').value,
+            status: 'open',
+            recurring,
+            recurringType,
+            recurringDays: recurringType === 'custom' ? recurringDays : null,
+            completedCount: 0,
+            onTimeCount: 0
+        }));
         Storage.save(); // Auto-save
-        this.reset(); renderReminders();
+        this.reset();
+        document.getElementById('recurringFields').classList.add('hidden');
+        document.getElementById('remRecurringDays').classList.add('hidden');
+        document.getElementById('remDate').value = new Date().toISOString().split('T')[0];
+        renderReminders();
+        renderDashboardReminders();
         showToast('Reminder diset. Awas lupa lho!', 'success');
     });
 
     function renderReminders() {
         const container = document.getElementById('reminderContainer');
-        if(reminders.length === 0) return container.innerHTML = '<p class="text-center text-muted" style="font-weight:700;">Aman bosku, gak ada utang/tanggungan!</p>';
+        const openReminders = getOpenReminders();
+        if(openReminders.length === 0) return container.innerHTML = '<p class="text-center text-muted" style="font-weight:700;">Aman bosku, gak ada utang/tanggungan!</p>';
         let html = '';
-        reminders.forEach(r => {
-            html += `<div class="rem-item"><div class="rem-icon"><i class="fa-solid fa-stopwatch"></i></div>
-                    <div class="rem-info"><h4>[${r.tipe}] ${r.judul}</h4><p>Jatuh Tempo: <strong>${r.tgl}</strong></p></div></div>`;
+        openReminders.sort((a, b) => new Date(a.tgl) - new Date(b.tgl)).forEach(r => {
+            const diff = getReminderDiffDays(r.tgl);
+            const overdue = diff !== null && diff < 0;
+            const dueLabel = overdue ? `Terlambat ${Math.abs(diff)} hari` : (diff === 0 ? 'Jatuh tempo hari ini' : `H-${diff}`);
+            html += `
+                <div class="rem-item">
+                    <div class="rem-main">
+                        <div class="rem-icon"><i class="fa-solid fa-stopwatch"></i></div>
+                        <div class="rem-info">
+                            <h4>[${r.tipe}] ${r.judul}</h4>
+                            <p>Jatuh Tempo: <strong>${r.tgl}</strong></p>
+                            <div class="rem-meta-row">
+                                <span class="rem-pill ${overdue ? 'overdue' : ''}">${dueLabel}</span>
+                                ${r.recurring ? `<span class="rem-pill">${formatRecurrenceLabel(r)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-rem-done" type="button" onclick="completeReminder('${r.id}')">Selesaikan</button>
+                </div>`;
         });
         container.innerHTML = html;
     }
@@ -1717,13 +1923,18 @@
         const essentialRatio = expense > 0 ? (essentialExpense / expense) * 100 : 0;
         const lifestyleExpense = Math.max(0, expense - essentialExpense - positiveSpend);
         const lifestyleRatio = expense > 0 ? (lifestyleExpense / expense) * 100 : 0;
-        const dueSoon = reminders.filter(r => {
-            if (!r.tgl) return false;
-            const d = new Date(r.tgl);
-            const now = new Date();
-            const diff = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-            return diff >= 0 && diff <= Math.max(1, Number(appSettings.variables.reminderNotifyDays) || 3) && r.tipe === 'Hutang';
+        const openReminders = getOpenReminders();
+        const dueSoon = openReminders.filter(r => {
+            const diff = getReminderDiffDays(r.tgl);
+            return diff !== null && diff >= 0 && diff <= Math.max(1, Number(appSettings.variables.reminderNotifyDays) || 3) && (r.tipe === 'Hutang' || r.tipe === 'Tagihan');
         }).length;
+        const overdueOpen = openReminders.filter(r => {
+            const diff = getReminderDiffDays(r.tgl);
+            return diff !== null && diff < 0 && (r.tipe === 'Hutang' || r.tipe === 'Tagihan');
+        }).length;
+        const totalCompletions = reminders.reduce((acc, r) => acc + (Number(r.completedCount) || 0), 0);
+        const onTimeCompletions = reminders.reduce((acc, r) => acc + (Number(r.onTimeCount) || 0), 0);
+        const onTimeRate = totalCompletions > 0 ? (onTimeCompletions / totalCompletions) * 100 : 100;
 
         let score = 50;
         if (income > 0) score += 10;
@@ -1740,8 +1951,22 @@
         if (lifestyleRatio > lifestyleWarnThreshold) score -= 10;
         if (positiveSpend > 0) score += 5;
         if (dueSoon > 0) score -= Math.min(15, dueSoon * 5);
+        if (overdueOpen > 0) score -= Math.min(20, overdueOpen * 6);
+        if (totalCompletions >= 3) {
+            if (onTimeRate >= 90) score += 8;
+            else if (onTimeRate >= 75) score += 4;
+            else score -= 8;
+        }
 
         score = Math.max(0, Math.min(100, Math.round(score)));
+
+        let creditScore = score;
+        creditScore -= Math.min(20, overdueOpen * 8);
+        if (totalCompletions >= 3) {
+            if (onTimeRate >= 90) creditScore += 8;
+            else if (onTimeRate < 70) creditScore -= 8;
+        }
+        creditScore = Math.max(0, Math.min(100, Math.round(creditScore)));
 
         let grade = 'Kritis';
         let badgeClass = 'health-low';
@@ -1761,6 +1986,8 @@
         if (savingsRate < savingTarget) suggestions.push(`Targetkan menabung minimal ${savingTarget}% dari pemasukan. Gunakan auto-transfer setelah gajian.`);
         if (lifestyleRatio > lifestyleWarnThreshold) suggestions.push(`Kurangi belanja gaya hidup 10-20% minggu ini agar lifestyle ratio di bawah ${lifestyleWarnThreshold}%.`);
         if (dueSoon > 0) suggestions.push(`Ada ${dueSoon} hutang jatuh tempo dekat. Prioritaskan bayar tepat waktu biar cashflow aman.`);
+        if (overdueOpen > 0) suggestions.push(`Masih ada ${overdueOpen} tanggungan lewat jatuh tempo. Selesaikan dulu untuk jaga skor kredit.`);
+        if (totalCompletions >= 3 && onTimeRate < 80) suggestions.push(`Rasio bayar tepat waktu baru ${onTimeRate.toFixed(1)}%. Naikkan disiplin bayar biar profil kredit membaik.`);
         if (positiveSpend <= 0) suggestions.push('Sisihkan nominal kecil ke "Tabungan Impian" agar kebiasaan finansial tetap positif.');
         if (suggestions.length === 0) suggestions.push('Pertahankan ritme saat ini dan naikkan target tabungan bertahap 2-5% tiap bulan.');
 
@@ -1771,6 +1998,8 @@
                     ? `Kondisi keuanganmu cukup aman, tapi masih ada ruang perbaikan di konsistensi tabungan dan disiplin pengeluaran.`
                     : `Kondisi keuanganmu sedang butuh perhatian. Fokus utama: stabilkan cashflow dan tekan pengeluaran non-prioritas.`;
 
+        const creditNote = `Skor kredit internal: ${creditScore}/100, rasio bayar tepat waktu ${onTimeRate.toFixed(1)}%.`;
+
         return {
             income,
             expense,
@@ -1779,9 +2008,12 @@
             essentialRatio,
             lifestyleRatio,
             score,
+            creditScore,
+            onTimeRate,
+            overdueOpen,
             grade,
             badgeClass,
-            review,
+            review: `${review} ${creditNote}`,
             suggestions
         };
     }
@@ -1807,6 +2039,14 @@
             <div class="report-kpi">
                 <h4>Lifestyle Ratio</h4>
                 <p>${insights.lifestyleRatio.toFixed(1)}%</p>
+            </div>
+            <div class="report-kpi">
+                <h4>Skor Kredit</h4>
+                <p>${insights.creditScore}/100</p>
+            </div>
+            <div class="report-kpi">
+                <h4>On-time Bayar</h4>
+                <p>${insights.onTimeRate.toFixed(1)}%</p>
             </div>
         `;
 
@@ -1869,13 +2109,15 @@
             doc.text(`Net Cashflow: ${formatRp(insights.net)}`, 20, 44);
             doc.text(`Saving Rate: ${insights.savingsRate.toFixed(1)}%`, 20, 50);
             doc.text(`Lifestyle Ratio: ${insights.lifestyleRatio.toFixed(1)}%`, 20, 56);
+            doc.text(`Skor Kredit: ${insights.creditScore}/100`, 20, 62);
+            doc.text(`On-time Bayar: ${insights.onTimeRate.toFixed(1)}%`, 20, 68);
 
             doc.setFont("helvetica", "bold");
-            doc.text("AI Review:", 20, 64);
+            doc.text("AI Review:", 20, 76);
             doc.setFont("helvetica", "normal");
-            doc.text(doc.splitTextToSize(insights.review, 170), 20, 70);
+            doc.text(doc.splitTextToSize(insights.review, 170), 20, 82);
 
-            let yPos = 86;
+            let yPos = 98;
             doc.setFont("helvetica", "bold");
             doc.text("Saran Perbaikan:", 20, yPos);
             doc.setFont("helvetica", "normal");
