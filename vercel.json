@@ -1,15 +1,5 @@
 {
-  "name": "FinPaws",
-  "version": "1.0.0",
-  "description": "FinPaws - Keuangan Asik Gen Z Edition",
-  "public": true,
-  "buildCommand": "",
-  "env": {
-    "NEXT_PUBLIC_APP_NAME": {
-      "description": "App name",
-      "default": "FinPaws"
-    }
-  },
+  "version": 2,
   "rewrites": [
     {
       "source": "/(.*)",
