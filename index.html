@@ -407,6 +407,86 @@
         .rem-info h4 { font-size: 1.05rem; font-weight: 800; margin-bottom: 5px; color: #92400e; }
         .rem-info p { font-size: 0.85rem; font-weight: 600; color: #b45309; }
 
+        .dash-reminder-wrap {
+            display: grid;
+            gap: 10px;
+        }
+        .dash-reminder-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            font-weight: 700;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        .dash-reminder-item strong {
+            display: block;
+            font-size: 0.92rem;
+            color: var(--text-main);
+        }
+        .dash-reminder-item span {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+        .dash-reminder-item.is-today {
+            border-color: #fdba74;
+            background: #fff7ed;
+        }
+        .dash-reminder-item.is-soon {
+            border-color: #93c5fd;
+            background: #eff6ff;
+        }
+        .rem-day-badge {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-weight: 900;
+            color: white;
+            background: var(--primary-color);
+            white-space: nowrap;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+        .admin-help {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .admin-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .admin-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #edf2f7;
+            color: #334155;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+        .admin-chip button {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #ef4444;
+            font-size: 0.8rem;
+            font-weight: 900;
+        }
+
         .bottom-nav {
             position: sticky; bottom: 0; left: 0; width: 100%;
             background-color: var(--surface-color); display: flex; justify-content: space-around;
@@ -594,6 +674,9 @@
             <span id="headerMascotIcon" style="font-size:1.6rem; margin-right:5px;">🐾</span> FinPaws
         </div>
         <div class="header-actions">
+            <button class="icon-btn hidden" id="btnAdminPanel" type="button" onclick="switchPage('pageAdmin')" title="Admin Settings">
+                <i class="fa-solid fa-sliders"></i>
+            </button>
             <button class="icon-btn" id="btnThemeToggle" type="button" onclick="toggleMode()" title="Ganti mode">
                 <i class="fa-solid fa-moon"></i>
             </button>
@@ -624,6 +707,16 @@
                         <p class="summary-label" style="justify-content:flex-end;"><i class="fa-solid fa-circle-arrow-up val-out"></i> Keluar</p>
                         <p class="summary-val val-out" id="dashExpense">Rp 0</p>
                     </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                    <h3 class="section-title" style="margin:0;">Pengingat Dekat</h3>
+                    <span style="font-size:0.82rem; font-weight:800; color:var(--primary-color); cursor:pointer;" onclick="switchPage('pageReminder')">Kelola</span>
+                </div>
+                <div id="dashboardReminderAlerts" class="dash-reminder-wrap">
+                    <!-- Reminder jatuh tempo diisi JS -->
                 </div>
             </div>
 
@@ -799,6 +892,50 @@
             </div>
         </div>
 
+        <!-- ADMIN SETTINGS PAGE -->
+        <div id="pageAdmin" class="page">
+            <h2 class="mb-20" style="font-weight:900;">Admin Settings ⚙️</h2>
+
+            <div class="card">
+                <h3 class="section-title">Kategori Transaksi</h3>
+                <div class="admin-grid">
+                    <div>
+                        <label class="form-label">Kategori Pemasukan</label>
+                        <textarea id="adminIncomeCategories" class="form-control" rows="4" placeholder="Satu kategori per baris"></textarea>
+                    </div>
+                    <div>
+                        <label class="form-label">Kategori Pengeluaran</label>
+                        <textarea id="adminExpenseCategories" class="form-control" rows="6" placeholder="Satu kategori per baris"></textarea>
+                    </div>
+                </div>
+                <p class="admin-help">Setiap baris akan jadi 1 opsi kategori di form input transaksi.</p>
+            </div>
+
+            <div class="card">
+                <h3 class="section-title">Variabel Finansial</h3>
+                <div class="admin-grid">
+                    <div class="form-group">
+                        <label class="form-label">Target Saving Rate Minimum (%)</label>
+                        <input type="number" id="adminTargetSavingRate" class="form-control" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Batas Lifestyle Ratio (%)</label>
+                        <input type="number" id="adminLifestyleWarnRatio" class="form-control" min="0" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rentang Notifikasi Reminder (hari)</label>
+                        <input type="number" id="adminReminderNotifyDays" class="form-control" min="0" max="30">
+                    </div>
+                </div>
+                <div class="admin-chip-row">
+                    <span class="admin-chip">Dipakai untuk skor kesehatan</span>
+                    <span class="admin-chip">Dipakai untuk notifikasi dashboard</span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" type="button" onclick="saveAdminSettings()">Simpan Settings Admin</button>
+        </div>
+
     </div>
 
     <!-- ==================== FINPAWS AI MASCOT (Clippy Style) ==================== -->
@@ -845,6 +982,7 @@
     const IS_PREVIEW = false; // GAS integration mode
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwTztGw-G9IMjWHTwbJK_Fv4SUJbdHeVAFPQnmqkxJks034SY2xBg0uonhY3nplqSfo/exec";
     const STORAGE_KEY = 'finpaws_data_v1';
+    const ALERT_TOAST_KEY_PREFIX = 'finpaws_reminder_toast_';
     
     // --- STATE MANAGEMENT ---
     let currentUser = null;
@@ -854,12 +992,13 @@
     let myChart = null;
     let latestReportInsights = null;
     let uiMode = 'light';
+    let appSettings = getDefaultSettings();
     
     // --- UTILITY: Local Storage Management ---
     const Storage = {
         save: () => {
             try {
-                const data = { currentUser, transactions, wishlists, reminders, uiMode };
+                const data = { currentUser, transactions, wishlists, reminders, uiMode, appSettings };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
                 console.log('✓ Data saved to localStorage');
             } catch (e) {
@@ -876,6 +1015,7 @@
                     wishlists = parsed.wishlists || [];
                     reminders = parsed.reminders || [];
                     uiMode = parsed.uiMode || 'light';
+                    appSettings = normalizeSettings(parsed.appSettings);
                     console.log('✓ Data loaded from localStorage');
                     return true;
                 }
@@ -896,6 +1036,51 @@
 
     function hasGoogleScriptRun() {
         return typeof google !== 'undefined' && google.script && google.script.run;
+    }
+
+    function getDefaultSettings() {
+        return {
+            categories: {
+                pemasukan: ['Gaji', 'Uang Jajan', 'Freelance', 'Jualan', 'Dikasih Orang Tua', 'Lainnya'],
+                pengeluaran: ['Makan Minum', 'Nongkrong/Ngopi', 'Transport/Bensin', 'Belanja/Skincare', 'Kos/Tagihan', 'Kuota Internet', 'Sedekah/Kasih Ortu', 'Lainnya']
+            },
+            variables: {
+                minSavingRate: 10,
+                lifestyleWarnRatio: 45,
+                reminderNotifyDays: 3
+            }
+        };
+    }
+
+    function normalizeSettings(raw) {
+        const defaults = getDefaultSettings();
+        if (!raw || typeof raw !== 'object') return defaults;
+
+        const categoriesRaw = raw.categories || {};
+        const variablesRaw = raw.variables || {};
+
+        const incomeList = Array.isArray(categoriesRaw.pemasukan)
+            ? categoriesRaw.pemasukan.filter(Boolean)
+            : defaults.categories.pemasukan;
+        const expenseList = Array.isArray(categoriesRaw.pengeluaran)
+            ? categoriesRaw.pengeluaran.filter(Boolean)
+            : defaults.categories.pengeluaran;
+
+        return {
+            categories: {
+                pemasukan: incomeList.length ? incomeList : defaults.categories.pemasukan,
+                pengeluaran: expenseList.length ? expenseList : defaults.categories.pengeluaran
+            },
+            variables: {
+                minSavingRate: Number.isFinite(Number(variablesRaw.minSavingRate)) ? Number(variablesRaw.minSavingRate) : defaults.variables.minSavingRate,
+                lifestyleWarnRatio: Number.isFinite(Number(variablesRaw.lifestyleWarnRatio)) ? Number(variablesRaw.lifestyleWarnRatio) : defaults.variables.lifestyleWarnRatio,
+                reminderNotifyDays: Number.isFinite(Number(variablesRaw.reminderNotifyDays)) ? Number(variablesRaw.reminderNotifyDays) : defaults.variables.reminderNotifyDays
+            }
+        };
+    }
+
+    function isAdminUser() {
+        return !!(currentUser && currentUser.username && currentUser.username.toLowerCase() === 'admin');
     }
 
     function applyMode() {
@@ -958,12 +1143,6 @@
         return res.json();
     }
     
-    // Kategori Data (Gen Z Edition + UMKM siap pakai)
-    const categories = {
-        pemasukan: ['Gaji', 'Uang Jajan', 'Freelance', 'Jualan', 'Dikasih Orang Tua', 'Lainnya'],
-        pengeluaran: ['Makan Minum', 'Nongkrong/Ngopi', 'Transport/Bensin', 'Belanja/Skincare', 'Kos/Tagihan', 'Kuota Internet', 'Sedekah/Kasih Ortu', 'Lainnya']
-    };
-
     // --- INISIALISASI AWAL ---
     document.addEventListener("DOMContentLoaded", () => {
         console.log(`🐾 FinPaws v${APP_VERSION} - Loading...`);
@@ -1027,6 +1206,11 @@
 
     // --- NAVIGASI HALAMAN ---
     function switchPage(pageId, navElement = null) {
+        if (pageId === 'pageAdmin' && !isAdminUser()) {
+            showToast('Halaman ini khusus admin.', 'error');
+            pageId = 'pageDashboard';
+        }
+
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
 
@@ -1039,6 +1223,7 @@
         if(pageId === 'pageWishlist') renderWishlist();
         if(pageId === 'pageReminder') renderReminders();
         if(pageId === 'pageLaporan') loadLaporan();
+        if(pageId === 'pageAdmin') renderAdminSettings();
     }
 
     function showLoader(show) { document.getElementById('loader').classList.toggle('hidden', !show); }
@@ -1058,7 +1243,134 @@
     function populateCategories(type) {
         const select = document.getElementById('txCategory');
         select.innerHTML = '';
-        categories[type].forEach(cat => { select.innerHTML += `<option value="${cat}">${cat}</option>`; });
+        const list = (appSettings.categories && appSettings.categories[type]) || [];
+        list.forEach(cat => { select.innerHTML += `<option value="${cat}">${cat}</option>`; });
+    }
+
+    function getReminderDiffDays(dateStr) {
+        if (!dateStr) return null;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(dateStr);
+        target.setHours(0, 0, 0, 0);
+        return Math.round((target - today) / (1000 * 60 * 60 * 24));
+    }
+
+    function renderDashboardReminders() {
+        const box = document.getElementById('dashboardReminderAlerts');
+        if (!box) return;
+
+        const notifyWindow = Math.max(0, Number(appSettings.variables.reminderNotifyDays) || 0);
+        const dueToday = [];
+        const dueSoon = [];
+
+        reminders.forEach(r => {
+            const diff = getReminderDiffDays(r.tgl);
+            if (diff === null || diff < 0) return;
+            if (diff === 0) dueToday.push({ ...r, diff });
+            else if (diff <= notifyWindow) dueSoon.push({ ...r, diff });
+        });
+
+        const merged = [...dueToday, ...dueSoon].sort((a, b) => a.diff - b.diff);
+        if (merged.length === 0) {
+            box.innerHTML = '<p class="text-center text-muted" style="font-weight:700; margin: 8px 0;">Belum ada reminder dekat. Santai tapi tetap disiplin ya.</p>';
+            return;
+        }
+
+        box.innerHTML = merged.map(item => {
+            const statusLabel = item.diff === 0 ? 'Hari ini' : `H-${item.diff}`;
+            const rowClass = item.diff === 0 ? 'is-today' : 'is-soon';
+            return `
+                <div class="dash-reminder-item ${rowClass}">
+                    <div>
+                        <strong>[${item.tipe}] ${item.judul}</strong>
+                        <span>Jatuh tempo: ${item.tgl}</span>
+                    </div>
+                    <span class="rem-day-badge">${statusLabel}</span>
+                </div>
+            `;
+        }).join('');
+
+        maybeShowTodayReminderToast(dueToday.length);
+    }
+
+    function maybeShowTodayReminderToast(todayCount) {
+        if (!todayCount || !currentUser || !currentUser.username) return;
+        const today = new Date().toISOString().split('T')[0];
+        const key = `${ALERT_TOAST_KEY_PREFIX}${currentUser.username}_${today}`;
+        try {
+            const alreadyShown = localStorage.getItem(key);
+            if (alreadyShown) return;
+            localStorage.setItem(key, '1');
+        } catch (_e) {
+            // Ignore storage issue, still show toast once per render cycle.
+        }
+        showToast(`Ada ${todayCount} reminder jatuh tempo hari ini. Cek di Home!`, 'error');
+    }
+
+    function renderAdminSettings() {
+        if (!isAdminUser()) return;
+        document.getElementById('adminIncomeCategories').value = appSettings.categories.pemasukan.join('\n');
+        document.getElementById('adminExpenseCategories').value = appSettings.categories.pengeluaran.join('\n');
+        document.getElementById('adminTargetSavingRate').value = appSettings.variables.minSavingRate;
+        document.getElementById('adminLifestyleWarnRatio').value = appSettings.variables.lifestyleWarnRatio;
+        document.getElementById('adminReminderNotifyDays').value = appSettings.variables.reminderNotifyDays;
+    }
+
+    function saveAdminSettings() {
+        if (!isAdminUser()) {
+            showToast('Fitur ini hanya untuk admin.', 'error');
+            return;
+        }
+
+        const incomeRaw = document.getElementById('adminIncomeCategories').value;
+        const expenseRaw = document.getElementById('adminExpenseCategories').value;
+        const incomeList = incomeRaw.split('\n').map(v => v.trim()).filter(Boolean);
+        const expenseList = expenseRaw.split('\n').map(v => v.trim()).filter(Boolean);
+
+        if (!incomeList.length || !expenseList.length) {
+            showToast('Kategori pemasukan dan pengeluaran wajib diisi minimal 1.', 'error');
+            return;
+        }
+
+        const minSavingRate = Number(document.getElementById('adminTargetSavingRate').value);
+        const lifestyleWarnRatio = Number(document.getElementById('adminLifestyleWarnRatio').value);
+        const reminderNotifyDays = Number(document.getElementById('adminReminderNotifyDays').value);
+
+        appSettings = normalizeSettings({
+            categories: {
+                pemasukan: incomeList,
+                pengeluaran: expenseList
+            },
+            variables: {
+                minSavingRate,
+                lifestyleWarnRatio,
+                reminderNotifyDays
+            }
+        });
+
+        const currentTxType = document.getElementById('txType').value || 'pengeluaran';
+        populateCategories(currentTxType);
+        renderDashboardReminders();
+        if (document.getElementById('pageLaporan').classList.contains('active')) {
+            loadLaporan();
+        }
+        Storage.save();
+        showToast('Settings admin berhasil disimpan.', 'success');
+    }
+
+    function applyAdminAccess() {
+        const adminBtn = document.getElementById('btnAdminPanel');
+        if (!adminBtn) return;
+        if (isAdminUser()) {
+            adminBtn.classList.remove('hidden');
+            renderAdminSettings();
+            return;
+        }
+        adminBtn.classList.add('hidden');
+        if (document.getElementById('pageAdmin').classList.contains('active')) {
+            switchPage('pageDashboard');
+        }
     }
 
     // --- LOGIKA LOGIN ---
@@ -1186,6 +1498,7 @@
 
             // Only load dummy data if no transactions exist
             if(IS_PREVIEW && transactions.length === 0) loadDummyData();
+            applyAdminAccess();
             Storage.save();
             switchPage('pageDashboard');
         }
@@ -1246,6 +1559,7 @@
         const listEl = document.getElementById('dashboardRecentList');
         listEl.innerHTML = recentHtml.length ? recentHtml.join('') : '<p style="text-align:center; color:#aaa; font-weight:700; margin: 20px 0;">Belum ada jajan. Bagus! Nabung terooos.</p>';
 
+        renderDashboardReminders();
         renderChart();
     }
 
@@ -1379,6 +1693,8 @@
     function generateFinancialInsights(filtered) {
         const essentialCategories = ['Makan Minum', 'Transport/Bensin', 'Kos/Tagihan', 'Kuota Internet'];
         const positiveExpenseCategories = ['Tabungan Impian', 'Sedekah/Kasih Ortu'];
+        const savingTarget = Number(appSettings.variables.minSavingRate) || 10;
+        const lifestyleWarnThreshold = Number(appSettings.variables.lifestyleWarnRatio) || 45;
 
         let income = 0;
         let expense = 0;
@@ -1406,7 +1722,7 @@
             const d = new Date(r.tgl);
             const now = new Date();
             const diff = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
-            return diff >= 0 && diff <= 7 && r.tipe === 'Hutang';
+            return diff >= 0 && diff <= Math.max(1, Number(appSettings.variables.reminderNotifyDays) || 3) && r.tipe === 'Hutang';
         }).length;
 
         let score = 50;
@@ -1421,7 +1737,7 @@
         if (net >= 0) score += 10;
         else score -= 15;
 
-        if (lifestyleRatio > 50) score -= 10;
+        if (lifestyleRatio > lifestyleWarnThreshold) score -= 10;
         if (positiveSpend > 0) score += 5;
         if (dueSoon > 0) score -= Math.min(15, dueSoon * 5);
 
@@ -1442,9 +1758,9 @@
 
         const suggestions = [];
         if (income <= 0) suggestions.push('Cari minimal 1 sumber pemasukan rutin per bulan agar arus kas stabil.');
-        if (savingsRate < 10) suggestions.push('Targetkan menabung minimal 10% dari pemasukan. Gunakan auto-transfer setelah gajian.');
-        if (lifestyleRatio > 45) suggestions.push('Kurangi belanja gaya hidup 10-20% minggu ini, alihkan ke dana darurat.');
-        if (dueSoon > 0) suggestions.push(`Ada ${dueSoon} hutang jatuh tempo < 7 hari. Prioritaskan bayar tepat waktu biar cashflow aman.`);
+        if (savingsRate < savingTarget) suggestions.push(`Targetkan menabung minimal ${savingTarget}% dari pemasukan. Gunakan auto-transfer setelah gajian.`);
+        if (lifestyleRatio > lifestyleWarnThreshold) suggestions.push(`Kurangi belanja gaya hidup 10-20% minggu ini agar lifestyle ratio di bawah ${lifestyleWarnThreshold}%.`);
+        if (dueSoon > 0) suggestions.push(`Ada ${dueSoon} hutang jatuh tempo dekat. Prioritaskan bayar tepat waktu biar cashflow aman.`);
         if (positiveSpend <= 0) suggestions.push('Sisihkan nominal kecil ke "Tabungan Impian" agar kebiasaan finansial tetap positif.');
         if (suggestions.length === 0) suggestions.push('Pertahankan ritme saat ini dan naikkan target tabungan bertahap 2-5% tiap bulan.');
 
