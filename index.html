@@ -953,6 +953,9 @@
                     <div class="form-group">
                         <input type="text" id="remJudul" class="form-control" placeholder="Mis: Bayar Netflix / Utang si A..." required>
                     </div>
+                    <div class="form-group">
+                        <input type="number" id="remAmount" class="form-control" placeholder="Nominal tagihan / piutang (Rp)" min="0">
+                    </div>
                     <div style="display:flex; gap:12px; margin-bottom:20px;">
                         <select id="remTipe" class="form-control" style="flex:1;">
                             <option value="Hutang">Hutang</option>
@@ -1440,7 +1443,7 @@
         text.innerHTML = `
             <strong>Selesaikan Reminder via Catatan</strong><br>
             [${reminder.tipe}] ${reminder.judul}<br>
-            Jatuh tempo: ${reminder.tgl}. Setelah transaksi disimpan, reminder akan otomatis selesai.
+            Jatuh tempo: ${reminder.tgl}${reminder.nominal > 0 ? ` • Nominal: ${formatRp(reminder.nominal)}` : ''}. Setelah transaksi disimpan, reminder akan otomatis selesai.
         `;
     }
 
@@ -1466,7 +1469,7 @@
 
         document.getElementById('txDate').value = txDate;
         document.getElementById('txNote').value = noteText;
-        document.getElementById('txAmount').value = '';
+        document.getElementById('txAmount').value = rem.nominal > 0 ? rem.nominal : '';
         populateCategories(txType);
         document.getElementById('txCategory').value = rem.tipe;
         renderSettlementBanner(rem);
@@ -1504,6 +1507,7 @@
             id: raw.id || Date.now(),
             judul: raw.judul || 'Tanpa judul',
             tipe: raw.tipe || 'Tagihan',
+            nominal: Number(raw.nominal) > 0 ? Number(raw.nominal) : 0,
             tgl: raw.tgl || new Date().toISOString().split('T')[0],
             status: raw.status || 'open',
             recurring: !!raw.recurring,
@@ -2048,10 +2052,12 @@
         const recurring = document.getElementById('remRecurring').checked;
         const recurringType = document.getElementById('remRecurringType').value;
         const recurringDays = Number(document.getElementById('remRecurringDays').value) || null;
+        const nominal = Number(document.getElementById('remAmount').value) || 0;
         const newReminder = normalizeReminder({
             id: Date.now(),
             judul: document.getElementById('remJudul').value,
             tipe: document.getElementById('remTipe').value,
+            nominal,
             tgl: document.getElementById('remDate').value,
             status: 'open',
             recurring,
@@ -2097,6 +2103,7 @@
                         <div class="rem-info">
                             <h4>[${r.tipe}] ${r.judul}</h4>
                             <p>Jatuh Tempo: <strong>${r.tgl}</strong></p>
+                            ${r.nominal > 0 ? `<p>Nominal: <strong>${formatRp(r.nominal)}</strong></p>` : ''}
                             <div class="rem-meta-row">
                                 <span class="rem-pill ${overdue ? 'overdue' : ''}">${dueLabel}</span>
                                 ${r.recurring ? `<span class="rem-pill">${formatRecurrenceLabel(r)}</span>` : ''}

@@ -123,7 +123,7 @@ function setupDatabase() {
   let remSheet = ss.getSheetByName("Reminders");
   if (!remSheet) {
     remSheet = ss.insertSheet("Reminders");
-    remSheet.appendRow(["rem_id", "username", "judul", "tipe", "jatuh_tempo", "status", "recurring", "recurring_type", "recurring_days", "completed_count", "on_time_count", "last_completed_at"]);
+    remSheet.appendRow(["rem_id", "username", "judul", "tipe", "jatuh_tempo", "status", "recurring", "recurring_type", "recurring_days", "completed_count", "on_time_count", "last_completed_at", "reminder_nominal"]);
     remSheet.setFrozenRows(1);
   } else {
     ensureReminderColumns(remSheet);
@@ -247,7 +247,7 @@ function saveTransaction(username, txData) {
 function ensureReminderColumns(remSheet) {
   const required = [
     "rem_id", "username", "judul", "tipe", "jatuh_tempo", "status", "recurring",
-    "recurring_type", "recurring_days", "completed_count", "on_time_count", "last_completed_at"
+    "recurring_type", "recurring_days", "completed_count", "on_time_count", "last_completed_at", "reminder_nominal"
   ];
 
   const headerRange = remSheet.getRange(1, 1, 1, Math.max(remSheet.getLastColumn(), 1));
@@ -291,7 +291,8 @@ function saveReminder(username, reminderData) {
     reminderData.recurringDays || "",
     reminderData.completedCount || 0,
     reminderData.onTimeCount || 0,
-    reminderData.lastCompletedAt || ""
+    reminderData.lastCompletedAt || "",
+    reminderData.nominal || 0
   ];
 
   for (var i = 1; i < data.length; i++) {
