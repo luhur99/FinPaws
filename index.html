@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- jsPDF untuk Download Laporan -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='0.9em' font-size='56'%3E🐾%3C/text%3E%3C/svg%3E">
 
     <style>
         /* === VARIABEL TEMA DASAR (Akan di-override oleh Tema Hewan) === */
@@ -781,6 +782,21 @@
             }
         }
     };
+
+    function hasGoogleScriptRun() {
+        return typeof google !== 'undefined' && google.script && google.script.run;
+    }
+
+    async function callGasWebApp(action, payload = {}) {
+        const body = new URLSearchParams({ action, ...payload });
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+            body
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    }
     
     // Kategori Data (Gen Z Edition + UMKM siap pakai)
     const categories = {
@@ -901,16 +917,36 @@
                 }
             }, 1000);
         } else {
-            // Logika GAS Asli
-            google.script.run.withSuccessHandler(res => {
-                showLoader(false);
-                if(res.status === 'success') {
-                    currentUser = res.data;
-                    handleLoginSuccess();
-                } else {
-                    showToast(res.message, 'error');
-                }
-            }).doLogin(user, pass);
+            // GAS via Apps Script container (jika dijalankan di HTMLService)
+            if (hasGoogleScriptRun()) {
+                google.script.run.withSuccessHandler(res => {
+                    showLoader(false);
+                    if(res.status === 'success') {
+                        currentUser = res.data;
+                        handleLoginSuccess();
+                    } else {
+                        showToast(res.message || 'Login gagal.', 'error');
+                    }
+                }).doLogin(user, pass);
+                return;
+            }
+
+            // GAS via deployed Web App URL (untuk Vercel/static hosting)
+            callGasWebApp('doLogin', { user, pass })
+                .then((res) => {
+                    showLoader(false);
+                    if (res && res.status === 'success') {
+                        currentUser = res.data;
+                        handleLoginSuccess();
+                    } else {
+                        showToast((res && res.message) || 'Login gagal dari GAS.', 'error');
+                    }
+                })
+                .catch((err) => {
+                    showLoader(false);
+                    console.error('GAS login error:', err);
+                    showToast('Gagal konek ke GAS. Cek deployment & izin Web App.', 'error');
+                });
         }
     });
 
@@ -945,14 +981,23 @@
         
         // Simpan ke Backend jika tidak preview
         if(!IS_PREVIEW) {
-            try {
+            if (hasGoogleScriptRun()) {
                 google.script.run.withSuccessHandler(()=>{
-                     masukKeApp();
+                    masukKeApp();
                 }).saveUserSetup(currentUser.username, selectedMascot);
-            } catch (e) {
-                console.warn('GAS integration not available, using local storage');
-                masukKeApp();
+                return;
             }
+
+            callGasWebApp('saveUserSetup', {
+                username: currentUser.username,
+                mascot: JSON.stringify(selectedMascot)
+            })
+                .then(() => masukKeApp())
+                .catch((e) => {
+                    console.warn('GAS setup save failed, fallback local only:', e);
+                    showToast('Setup tersimpan lokal. GAS belum merespons.', 'error');
+                    masukKeApp();
+                });
         } else {
             masukKeApp();
         }
