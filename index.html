@@ -54,6 +54,15 @@
         /* 10. Tema Koala (Santai, Abu-abu/Ungu Pudar) */
         body.theme-koala { --bg-color: #f5f6fa; --primary-color: #576574; --secondary-color: #c8d6e5; }
 
+        /* Mode Gelap/Terang */
+        body.mode-dark {
+            --bg-color: #101820;
+            --surface-color: #1b2631;
+            --text-main: #ecf0f1;
+            --text-muted: #b8c6d1;
+            --shadow: 0 12px 28px rgba(0,0,0,0.35);
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -122,6 +131,26 @@
             padding: 5px 15px 5px 5px;
             border-radius: 30px;
         }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .icon-btn {
+            width: 38px;
+            height: 38px;
+            border: none;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: var(--bg-color);
+            color: var(--primary-color);
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .icon-btn:active { transform: scale(0.95); }
         .user-avatar {
             width: 35px;
             height: 35px;
@@ -502,9 +531,17 @@
         <div class="app-title">
             <span id="headerMascotIcon" style="font-size:1.6rem; margin-right:5px;">🐾</span> FinPaws
         </div>
-        <div class="user-profile" onclick="showToast('Menu Profile (Coming Soon)', 'info')">
-            <span style="font-weight: 800; font-size: 0.95rem; margin-left: 10px;" id="displayUsername">User</span>
-            <div class="user-avatar" id="headerAvatar">👤</div>
+        <div class="header-actions">
+            <button class="icon-btn" id="btnThemeToggle" type="button" onclick="toggleMode()" title="Ganti mode">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <div class="user-profile">
+                <span style="font-weight: 800; font-size: 0.95rem; margin-left: 10px;" id="displayUsername">User</span>
+                <div class="user-avatar" id="headerAvatar">👤</div>
+            </div>
+            <button class="icon-btn" id="btnLogout" type="button" onclick="logoutUser()" title="Logout">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
         </div>
     </div>
 
@@ -744,12 +781,13 @@
     let wishlists = [];
     let reminders = [];
     let myChart = null;
+    let uiMode = 'light';
     
     // --- UTILITY: Local Storage Management ---
     const Storage = {
         save: () => {
             try {
-                const data = { currentUser, transactions, wishlists, reminders };
+                const data = { currentUser, transactions, wishlists, reminders, uiMode };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
                 console.log('✓ Data saved to localStorage');
             } catch (e) {
@@ -765,6 +803,7 @@
                     transactions = parsed.transactions || [];
                     wishlists = parsed.wishlists || [];
                     reminders = parsed.reminders || [];
+                    uiMode = parsed.uiMode || 'light';
                     console.log('✓ Data loaded from localStorage');
                     return true;
                 }
@@ -785,6 +824,47 @@
 
     function hasGoogleScriptRun() {
         return typeof google !== 'undefined' && google.script && google.script.run;
+    }
+
+    function applyMode() {
+        document.body.classList.remove('mode-light', 'mode-dark');
+        document.body.classList.add(`mode-${uiMode}`);
+        const btn = document.getElementById('btnThemeToggle');
+        if (btn) {
+            btn.innerHTML = uiMode === 'dark'
+                ? '<i class="fa-solid fa-sun"></i>'
+                : '<i class="fa-solid fa-moon"></i>';
+        }
+    }
+
+    function toggleMode() {
+        uiMode = uiMode === 'dark' ? 'light' : 'dark';
+        applyMode();
+        Storage.save();
+    }
+
+    function setAuthState(mode) {
+        const loginPage = document.getElementById('loginPage');
+        const setupPage = document.getElementById('setupPage');
+        const mainHeader = document.getElementById('mainAppHeader');
+        const mainContent = document.getElementById('mainAppContent');
+        const bottomNav = document.getElementById('bottomNav');
+        const aiContainer = document.getElementById('aiContainer');
+
+        loginPage.classList.toggle('hidden', mode !== 'login');
+        setupPage.classList.toggle('hidden', mode !== 'setup');
+        mainHeader.classList.toggle('hidden', mode !== 'app');
+        mainContent.classList.toggle('hidden', mode !== 'app');
+        bottomNav.classList.toggle('hidden', mode !== 'app');
+        aiContainer.classList.toggle('hidden', mode !== 'app');
+    }
+
+    function logoutUser() {
+        currentUser = null;
+        Storage.save();
+        setAuthState('login');
+        document.getElementById('formLogin').reset();
+        showToast('Kamu berhasil logout.', 'success');
     }
 
     async function callGasWebApp(action, payload = {}) {
@@ -819,6 +899,8 @@
         // Load saved data from localStorage
         Storage.load();
         
+        applyMode();
+
         // Set default dates
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('txDate').value = today;
@@ -835,6 +917,14 @@
                 if(fileName.length > 20) fileName = fileName.substring(0,17) + "...";
                 document.getElementById('fileNameDisplay').innerText = fileName;
             });
+        }
+
+        if (currentUser && currentUser.mascot) {
+            masukKeApp();
+        } else if (currentUser && currentUser.isNew) {
+            setAuthState('setup');
+        } else {
+            setAuthState('login');
         }
         
         console.log('✓ FinPaws initialized');
@@ -959,11 +1049,8 @@
     });
 
     function handleLoginSuccess() {
-        document.getElementById('loginPage').classList.remove('active');
-        
         if (currentUser.isNew || !currentUser.mascot) {
-            document.getElementById('setupPage').classList.remove('hidden');
-            document.getElementById('setupPage').classList.add('active');
+            setAuthState('setup');
         } else {
             masukKeApp();
         }
@@ -1014,9 +1101,9 @@
     function masukKeApp() {
         // Terapkan Tema Gen Z
         if (currentUser && currentUser.mascot) {
-            document.body.className = currentUser.mascot.tema;
-            document.getElementById('setupPage').classList.remove('active');
-            document.getElementById('setupPage').classList.add('hidden');
+            document.body.className = `${currentUser.mascot.tema} mode-${uiMode}`;
+            applyMode();
+            setAuthState('app');
 
             document.getElementById('displayUsername').innerText = currentUser.username || 'User';
             document.getElementById('headerAvatar').innerText = currentUser.mascot.ikon;
@@ -1025,11 +1112,6 @@
             document.getElementById('aiMascotIcon').innerText = currentUser.mascot.ikon;
             document.getElementById('aiMessage').innerText = `Halo bestie! Aku ${currentUser.mascot.nama}. Semangat kelola cuan hari ini ya! ✨`;
 
-            document.getElementById('mainAppHeader').classList.remove('hidden');
-            document.getElementById('bottomNav').classList.remove('hidden');
-            document.getElementById('aiContainer').classList.remove('hidden');
-            document.getElementById('mainAppContent').classList.remove('hidden');
-            
             // Only load dummy data if no transactions exist
             if(IS_PREVIEW && transactions.length === 0) loadDummyData();
             Storage.save();
