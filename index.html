@@ -711,7 +711,11 @@
             <div class="form-group">
                 <input type="password" id="loginPassword" class="form-control" placeholder="Password" autocomplete="current-password" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Gaskeun!</button>
+            <div class="form-group hidden" id="signupConfirmWrap">
+                <input type="password" id="signupConfirmPassword" class="form-control" placeholder="Ulangi Password" autocomplete="new-password">
+            </div>
+            <button type="submit" class="btn btn-primary" id="btnAuthSubmit" style="margin-top: 10px;">Gaskeun!</button>
+            <button type="button" class="btn btn-outline" id="btnSwitchAuthMode" onclick="toggleAuthMode()" style="margin-top: 10px;">Belum punya akun? Sign up</button>
         </form>
         <p style="margin-top:25px; font-size:0.85rem; color:var(--text-muted); font-weight:600;">
             *Mode Preview:<br>Admin (admin / edudigital)<br>Peserta Baru (peserta / edudigital)
@@ -1081,6 +1085,7 @@
     let myChart = null;
     let latestReportInsights = null;
     let uiMode = 'light';
+    let authMode = 'login';
     let appSettings = getDefaultSettings();
     
     // --- UTILITY: Local Storage Management ---
@@ -1209,8 +1214,33 @@
         currentUser = null;
         Storage.save();
         setAuthState('login');
+        setAuthMode('login');
         document.getElementById('formLogin').reset();
         showToast('Kamu berhasil logout.', 'success');
+    }
+
+    function setAuthMode(mode) {
+        authMode = mode === 'signup' ? 'signup' : 'login';
+        const confirmWrap = document.getElementById('signupConfirmWrap');
+        const confirmInput = document.getElementById('signupConfirmPassword');
+        const submitBtn = document.getElementById('btnAuthSubmit');
+        const switchBtn = document.getElementById('btnSwitchAuthMode');
+        const passInput = document.getElementById('loginPassword');
+
+        if (confirmWrap) confirmWrap.classList.toggle('hidden', authMode !== 'signup');
+        if (confirmInput) {
+            confirmInput.required = authMode === 'signup';
+            if (authMode !== 'signup') confirmInput.value = '';
+        }
+        if (passInput) {
+            passInput.autocomplete = authMode === 'signup' ? 'new-password' : 'current-password';
+        }
+        if (submitBtn) submitBtn.innerText = authMode === 'signup' ? 'Buat Akun' : 'Gaskeun!';
+        if (switchBtn) switchBtn.innerText = authMode === 'signup' ? 'Sudah punya akun? Login' : 'Belum punya akun? Sign up';
+    }
+
+    function toggleAuthMode() {
+        setAuthMode(authMode === 'signup' ? 'login' : 'signup');
     }
 
     async function callGasWebApp(action, payload = {}) {
@@ -1281,6 +1311,7 @@
             setAuthState('setup');
         } else {
             setAuthState('login');
+            setAuthMode('login');
         }
         
         console.log('✓ FinPaws initialized');
@@ -1575,13 +1606,24 @@
         e.preventDefault();
         const user = document.getElementById('loginUsername').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
+        const confirmPass = document.getElementById('signupConfirmPassword').value.trim();
+
+        if (authMode === 'signup') {
+            if (user.length < 3) return showToast('Username minimal 3 karakter.', 'error');
+            if (pass.length < 4) return showToast('Password minimal 4 karakter.', 'error');
+            if (pass !== confirmPass) return showToast('Konfirmasi password tidak sama.', 'error');
+        }
 
         showLoader(true);
 
         if (IS_PREVIEW) {
             setTimeout(() => {
                 showLoader(false);
-                if (user === 'admin' && pass === 'edudigital') {
+                if (authMode === 'signup') {
+                    currentUser = { username: user, isNew: true, mascot: null };
+                    Storage.save();
+                    handleLoginSuccess();
+                } else if (user === 'admin' && pass === 'edudigital') {
                     // Admin (Sudah setup)
                     currentUser = { username: user, isNew: false, mascot: { jenis: 'anjing', nama: 'Doggo', ikon: '🐶', tema: 'theme-anjing' } };
                     Storage.save();
@@ -1598,38 +1640,45 @@
         } else {
             // GAS via Apps Script container (jika dijalankan di HTMLService)
             if (hasGoogleScriptRun()) {
-                google.script.run.withSuccessHandler(res => {
+                const done = (res, fallbackMessage) => {
                     showLoader(false);
                     if(res.status === 'success') {
                         currentUser = res.data;
                         handleLoginSuccess();
                     } else {
-                        showToast(res.message || 'Login gagal.', 'error');
+                        showToast(res.message || fallbackMessage, 'error');
                     }
-                }).doLogin(user, pass);
+                };
+                if (authMode === 'signup') {
+                    google.script.run.withSuccessHandler(res => done(res, 'Signup gagal.')).signUp(user, pass);
+                } else {
+                    google.script.run.withSuccessHandler(res => done(res, 'Login gagal.')).doLogin(user, pass);
+                }
                 return;
             }
 
             // GAS via deployed Web App URL (untuk Vercel/static hosting)
-            callGasWebApp('doLogin', { user, pass })
+            const action = authMode === 'signup' ? 'signUp' : 'doLogin';
+            callGasWebApp(action, { user, pass })
                 .then((res) => {
                     showLoader(false);
                     if (res && res.status === 'success') {
                         currentUser = res.data;
                         handleLoginSuccess();
                     } else {
-                        showToast((res && res.message) || 'Login gagal dari GAS.', 'error');
+                        showToast((res && res.message) || (authMode === 'signup' ? 'Signup gagal dari GAS.' : 'Login gagal dari GAS.'), 'error');
                     }
                 })
                 .catch((err) => {
                     showLoader(false);
-                    console.error('GAS login error:', err);
+                    console.error('GAS auth error:', err);
                     showToast(`Gagal konek ke GAS: ${err.message}`, 'error');
                 });
         }
     });
 
     function handleLoginSuccess() {
+        setAuthMode('login');
         if (currentUser.isNew || !currentUser.mascot) {
             setAuthState('setup');
         } else {

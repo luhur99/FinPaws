@@ -13,6 +13,12 @@ function doPost(e) {
       return jsonResponse(doLogin(user, pass));
     }
 
+    if (action === "signUp") {
+      const user = (e.parameter.user || "").trim();
+      const pass = (e.parameter.pass || "").trim();
+      return jsonResponse(signUp(user, pass));
+    }
+
     if (action === "saveUserSetup") {
       const username = (e.parameter.username || "").trim();
       const mascotRaw = e.parameter.mascot || "";
@@ -153,6 +159,53 @@ function doLogin(username, password) {
     }
   }
   return { status: 'error', message: 'Username atau Password salah ngab!' };
+}
+
+function signUp(username, password) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const userSheet = ss.getSheetByName("Users");
+
+  if (!userSheet) {
+    return { status: 'error', message: 'Database belum di-setup. Jalankan setupDatabase() di GAS.' };
+  }
+
+  if (!username || username.length < 3) {
+    return { status: 'error', message: 'Username minimal 3 karakter.' };
+  }
+
+  if (!password || password.length < 4) {
+    return { status: 'error', message: 'Password minimal 4 karakter.' };
+  }
+
+  const data = userSheet.getDataRange().getValues();
+  const usernameLower = username.toLowerCase();
+  let maxNumericId = 0;
+
+  for (let i = 1; i < data.length; i++) {
+    const existingUsername = String(data[i][1] || "").toLowerCase();
+    if (existingUsername === usernameLower) {
+      return { status: 'error', message: 'Username sudah dipakai, pilih yang lain.' };
+    }
+
+    const userId = String(data[i][0] || "");
+    const match = userId.match(/^U-(\d+)$/);
+    if (match) {
+      const numeric = Number(match[1]);
+      if (numeric > maxNumericId) maxNumericId = numeric;
+    }
+  }
+
+  const newId = "U-" + String(maxNumericId + 1).padStart(3, '0');
+  userSheet.appendRow([newId, username, password, ""]);
+
+  return {
+    status: 'success',
+    data: {
+      username: username,
+      isNew: true,
+      mascot: null
+    }
+  };
 }
 
 function saveUserSetup(username, mascotObj) {
