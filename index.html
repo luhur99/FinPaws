@@ -337,6 +337,68 @@
         .wish-progress-bar { height: 100%; background-color: var(--primary-color); border-radius: 10px; width: 0%; transition: width 1s ease-in-out; }
         .wish-stats { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
 
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .report-kpi {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 14px;
+        }
+        .report-kpi h4 {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .report-kpi p {
+            font-size: 1rem;
+            font-weight: 900;
+            color: var(--text-main);
+        }
+        .health-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 900;
+        }
+        .health-good { background: rgba(0,184,148,0.12); color: #00866f; }
+        .health-mid { background: rgba(243,156,18,0.14); color: #b06f09; }
+        .health-low { background: rgba(231,76,60,0.14); color: #b9301f; }
+        .ai-review-card {
+            background: linear-gradient(135deg, rgba(108,92,231,0.12), rgba(162,155,254,0.18));
+            border: 1px solid rgba(108,92,231,0.2);
+            border-radius: 20px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .ai-review-title {
+            font-size: 0.9rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .suggestion-list {
+            margin-top: 10px;
+            padding-left: 18px;
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
         .rem-item {
             display: flex; align-items: center; padding: 20px; background: #fffbeb;
             border: 2px solid #fde68a; border-radius: 20px; margin-bottom: 15px;
@@ -721,6 +783,15 @@
                 </div>
             </div>
 
+            <div class="card" id="laporanInsightCard">
+                <div class="report-grid" id="laporanSummary">
+                    <!-- KPI Laporan -->
+                </div>
+                <div class="ai-review-card" id="laporanAiReview">
+                    <!-- AI Review -->
+                </div>
+            </div>
+
             <div class="card" style="padding:10px;">
                 <ul class="recent-list" id="laporanList" style="margin:0;">
                     <!-- Data Laporan dari JS -->
@@ -781,6 +852,7 @@
     let wishlists = [];
     let reminders = [];
     let myChart = null;
+    let latestReportInsights = null;
     let uiMode = 'light';
     
     // --- UTILITY: Local Storage Management ---
@@ -1304,12 +1376,142 @@
         container.innerHTML = html;
     }
 
+    function generateFinancialInsights(filtered) {
+        const essentialCategories = ['Makan Minum', 'Transport/Bensin', 'Kos/Tagihan', 'Kuota Internet'];
+        const positiveExpenseCategories = ['Tabungan Impian', 'Sedekah/Kasih Ortu'];
+
+        let income = 0;
+        let expense = 0;
+        let essentialExpense = 0;
+        let positiveSpend = 0;
+
+        filtered.forEach(tx => {
+            const nominal = Number(tx.nominal) || 0;
+            if (tx.tipe === 'pemasukan') {
+                income += nominal;
+            } else {
+                expense += nominal;
+                if (essentialCategories.includes(tx.kategori)) essentialExpense += nominal;
+                if (positiveExpenseCategories.includes(tx.kategori)) positiveSpend += nominal;
+            }
+        });
+
+        const net = income - expense;
+        const savingsRate = income > 0 ? (net / income) * 100 : 0;
+        const essentialRatio = expense > 0 ? (essentialExpense / expense) * 100 : 0;
+        const lifestyleExpense = Math.max(0, expense - essentialExpense - positiveSpend);
+        const lifestyleRatio = expense > 0 ? (lifestyleExpense / expense) * 100 : 0;
+        const dueSoon = reminders.filter(r => {
+            if (!r.tgl) return false;
+            const d = new Date(r.tgl);
+            const now = new Date();
+            const diff = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+            return diff >= 0 && diff <= 7 && r.tipe === 'Hutang';
+        }).length;
+
+        let score = 50;
+        if (income > 0) score += 10;
+        else score -= 20;
+
+        if (savingsRate >= 20) score += 25;
+        else if (savingsRate >= 10) score += 15;
+        else if (savingsRate >= 0) score += 5;
+        else score -= 20;
+
+        if (net >= 0) score += 10;
+        else score -= 15;
+
+        if (lifestyleRatio > 50) score -= 10;
+        if (positiveSpend > 0) score += 5;
+        if (dueSoon > 0) score -= Math.min(15, dueSoon * 5);
+
+        score = Math.max(0, Math.min(100, Math.round(score)));
+
+        let grade = 'Kritis';
+        let badgeClass = 'health-low';
+        if (score >= 80) {
+            grade = 'Sehat';
+            badgeClass = 'health-good';
+        } else if (score >= 60) {
+            grade = 'Cukup';
+            badgeClass = 'health-mid';
+        } else if (score >= 45) {
+            grade = 'Waspada';
+            badgeClass = 'health-mid';
+        }
+
+        const suggestions = [];
+        if (income <= 0) suggestions.push('Cari minimal 1 sumber pemasukan rutin per bulan agar arus kas stabil.');
+        if (savingsRate < 10) suggestions.push('Targetkan menabung minimal 10% dari pemasukan. Gunakan auto-transfer setelah gajian.');
+        if (lifestyleRatio > 45) suggestions.push('Kurangi belanja gaya hidup 10-20% minggu ini, alihkan ke dana darurat.');
+        if (dueSoon > 0) suggestions.push(`Ada ${dueSoon} hutang jatuh tempo < 7 hari. Prioritaskan bayar tepat waktu biar cashflow aman.`);
+        if (positiveSpend <= 0) suggestions.push('Sisihkan nominal kecil ke "Tabungan Impian" agar kebiasaan finansial tetap positif.');
+        if (suggestions.length === 0) suggestions.push('Pertahankan ritme saat ini dan naikkan target tabungan bertahap 2-5% tiap bulan.');
+
+        const review =
+            score >= 80
+                ? `Kondisi keuanganmu lagi fit banget. Net cashflow positif dan kebiasaan spending sudah terkontrol.`
+                : score >= 60
+                    ? `Kondisi keuanganmu cukup aman, tapi masih ada ruang perbaikan di konsistensi tabungan dan disiplin pengeluaran.`
+                    : `Kondisi keuanganmu sedang butuh perhatian. Fokus utama: stabilkan cashflow dan tekan pengeluaran non-prioritas.`;
+
+        return {
+            income,
+            expense,
+            net,
+            savingsRate,
+            essentialRatio,
+            lifestyleRatio,
+            score,
+            grade,
+            badgeClass,
+            review,
+            suggestions
+        };
+    }
+
+    function renderFinancialInsights(insights) {
+        const summaryEl = document.getElementById('laporanSummary');
+        const reviewEl = document.getElementById('laporanAiReview');
+
+        summaryEl.innerHTML = `
+            <div class="report-kpi">
+                <h4>Skor Kesehatan</h4>
+                <p>${insights.score}/100</p>
+                <span class="health-badge ${insights.badgeClass}">${insights.grade}</span>
+            </div>
+            <div class="report-kpi">
+                <h4>Net Cashflow</h4>
+                <p>${formatRp(insights.net)}</p>
+            </div>
+            <div class="report-kpi">
+                <h4>Saving Rate</h4>
+                <p>${insights.savingsRate.toFixed(1)}%</p>
+            </div>
+            <div class="report-kpi">
+                <h4>Lifestyle Ratio</h4>
+                <p>${insights.lifestyleRatio.toFixed(1)}%</p>
+            </div>
+        `;
+
+        reviewEl.innerHTML = `
+            <div class="ai-review-title"><i class="fa-solid fa-robot"></i> AI Financial Review</div>
+            <p style="font-size:0.92rem; font-weight:700; color:var(--text-main); line-height:1.5;">${insights.review}</p>
+            <ul class="suggestion-list">
+                ${insights.suggestions.map(s => `<li>${s}</li>`).join('')}
+            </ul>
+        `;
+    }
+
     // --- LAPORAN & PDF ---
     function loadLaporan() {
         const mulai = document.getElementById('lapMulai').value;
         const sampai = document.getElementById('lapSampai').value;
         const filtered = transactions.filter(t => t.tgl >= mulai && t.tgl <= sampai);
         const listEl = document.getElementById('laporanList');
+
+        latestReportInsights = generateFinancialInsights(filtered);
+        renderFinancialInsights(latestReportInsights);
         
         if(filtered.length === 0) return listEl.innerHTML = '<p class="text-center text-muted mt-20" style="font-weight:700;">Sepi amat, gak ada transaksi.</p>';
 
@@ -1343,8 +1545,31 @@
             doc.setFontSize(12); doc.setFont("helvetica", "normal");
             doc.text(`Periode: ${mulai} s/d ${sampai}`, 20, 30);
 
-            let yPos = 45;
             const filtered = transactions.filter(t => t.tgl >= mulai && t.tgl <= sampai);
+            const insights = latestReportInsights || generateFinancialInsights(filtered);
+
+            doc.setFontSize(11);
+            doc.text(`Skor Kesehatan: ${insights.score}/100 (${insights.grade})`, 20, 38);
+            doc.text(`Net Cashflow: ${formatRp(insights.net)}`, 20, 44);
+            doc.text(`Saving Rate: ${insights.savingsRate.toFixed(1)}%`, 20, 50);
+            doc.text(`Lifestyle Ratio: ${insights.lifestyleRatio.toFixed(1)}%`, 20, 56);
+
+            doc.setFont("helvetica", "bold");
+            doc.text("AI Review:", 20, 64);
+            doc.setFont("helvetica", "normal");
+            doc.text(doc.splitTextToSize(insights.review, 170), 20, 70);
+
+            let yPos = 86;
+            doc.setFont("helvetica", "bold");
+            doc.text("Saran Perbaikan:", 20, yPos);
+            doc.setFont("helvetica", "normal");
+            yPos += 6;
+            insights.suggestions.forEach((s, i) => {
+                doc.text(doc.splitTextToSize(`${i + 1}. ${s}`, 170), 20, yPos);
+                yPos += 8;
+            });
+
+            yPos += 6;
             
             if(filtered.length === 0) {
                 doc.text("Tidak ada data transaksi.", 20, yPos);
