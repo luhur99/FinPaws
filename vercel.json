@@ -1,0 +1,48 @@
+{
+  "name": "FinPaws",
+  "version": "1.0.0",
+  "description": "FinPaws - Keuangan Asik Gen Z Edition",
+  "public": true,
+  "buildCommand": "",
+  "env": {
+    "NEXT_PUBLIC_APP_NAME": {
+      "description": "App name",
+      "default": "FinPaws"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600, must-revalidate"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "cleanUrls": true,
+  "trailingSlash": false
+}

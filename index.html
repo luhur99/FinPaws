@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Permissions-Policy" content="storage-access=()">
+    <title>FinPaws - Keuangan Asik Gen Z</title>
+    
+    <!-- Google Fonts: Nunito for playful Gen Z vibe -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF untuk Download Laporan -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        /* === VARIABEL TEMA DASAR (Akan di-override oleh Tema Hewan) === */
+        :root {
+            --bg-color: #f4f7f6;
+            --surface-color: #ffffff;
+            --primary-color: #6c5ce7; /* Default ungu ceria */
+            --secondary-color: #a29bfe;
+            --text-main: #2d3436;
+            --text-muted: #636e72;
+            --success: #00b894;
+            --danger: #ff7675;
+            --border-radius: 24px;
+            --shadow: 0 10px 25px rgba(0,0,0,0.05);
+            --mascot-font: 'Nunito', sans-serif;
+        }
+
+        /* 1. Tema Anjing (Ceria, Coklat/Orange) */
+        body.theme-anjing { --bg-color: #fffaf0; --primary-color: #e17055; --secondary-color: #fab1a0; }
+        /* 2. Tema Kucing (Cool, Ungu/Pink) */
+        body.theme-kucing { --bg-color: #fdf5fc; --primary-color: #a29bfe; --secondary-color: #e056fd; }
+        /* 3. Tema Burung Hantu (Malam/Smart, Biru Gelap/Kuning) */
+        body.theme-burunghantu { --bg-color: #f0f4f8; --primary-color: #2c3e50; --secondary-color: #f39c12; }
+        /* 4. Tema Kelinci (Lembut, Mint/Hijau Muda) */
+        body.theme-kelinci { --bg-color: #f0fff4; --primary-color: #55efc4; --secondary-color: #00b894; }
+        /* 5. Tema Beruang (Warm, Coklat Tua/Muda) */
+        body.theme-beruang { --bg-color: #fbf5ee; --primary-color: #8d6e63; --secondary-color: #d7ccc8; }
+        /* 6. Tema Panda (Monochrome Gen Z, Hitam/Putih/Abu) */
+        body.theme-panda { --bg-color: #f1f2f6; --primary-color: #2f3640; --secondary-color: #718093; }
+        /* 7. Tema Rubah (Energetic, Orange Terang/Merah) */
+        body.theme-rubah { --bg-color: #fff3e0; --primary-color: #ff7f50; --secondary-color: #ff6b81; }
+        /* 8. Tema Kura-kura (Slow/Steady, Hijau Tua) */
+        body.theme-kurakura { --bg-color: #e8f5e9; --primary-color: #2e7d32; --secondary-color: #81c784; }
+        /* 9. Tema Penguin (Dingin/Chill, Biru Es) */
+        body.theme-penguin { --bg-color: #e3f2fd; --primary-color: #00a8ff; --secondary-color: #74b9ff; }
+        /* 10. Tema Koala (Santai, Abu-abu/Ungu Pudar) */
+        body.theme-koala { --bg-color: #f5f6fa; --primary-color: #576574; --secondary-color: #c8d6e5; }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--mascot-font);
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            transition: background-color 0.5s ease;
+        }
+
+        /* Menyembunyikan elemen Blogger bawaan (hanya yang perlu) */
+        #navbar-iframe { display: none !important; }
+        
+        /* Container Utama - Simulasi Mobile */
+        .app-container {
+            width: 100%;
+            max-width: 100%;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: visible;
+            margin: 0 auto;
+        }
+        
+        /* Untuk Blogger: buat container lebih fleksibel */
+        @media (min-width: 768px) {
+            .app-container {
+                max-width: 480px;
+                margin: 0 auto;
+                box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            }
+        }
+
+        .app-header {
+            background-color: var(--surface-color);
+            padding: 20px 25px;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        .app-title {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: -0.5px;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-color);
+            padding: 5px 15px 5px 5px;
+            border-radius: 30px;
+        }
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            padding-bottom: 140px; /* Ruang untuk bottom nav + mascot */
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+        .main-content::-webkit-scrollbar { display: none; }
+        .main-content { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Komponen Umum (Card, Button, Form) */
+        .card {
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 15px 24px;
+            border-radius: 16px;
+            border: none;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
+            width: 100%;
+        }
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        .btn-primary:active { transform: scale(0.95); }
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .form-group { margin-bottom: 18px; }
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+        .form-control {
+            width: 100%;
+            padding: 16px;
+            border-radius: 16px;
+            border: 2px solid #edf2f7;
+            background-color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.3s ease;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: white;
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.1);
+        }
+
+        /* File Upload - Mobile Friendly */
+        .file-upload-wrapper { position: relative; overflow: hidden; width: 100%; }
+        .file-upload-wrapper input[type=file] {
+            font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%;
+        }
+        .upload-btn-ui {
+            border: 2px dashed var(--secondary-color);
+            background-color: rgba(255,255,255,0.5);
+            padding: 25px;
+            border-radius: 16px;
+            text-align: center;
+            color: var(--primary-color);
+            font-weight: 700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            transition: background-color 0.3s;
+        }
+
+        .page { display: none; animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .page.active { display: block; }
+        @keyframes slideUpFade { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px 25px;
+            border-radius: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+        /* Dekorasi Geometris di Balance Card */
+        .balance-card::after {
+            content: ''; position: absolute; top: -20px; right: -20px;
+            width: 100px; height: 100px; background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .balance-title { font-size: 0.95rem; font-weight: 600; opacity: 0.9; margin-bottom: 8px;}
+        .balance-amount { font-size: 2.8rem; font-weight: 900; letter-spacing: -1px; }
+        
+        .summary-row {
+            display: flex; justify-content: space-between; margin-top: 25px;
+            background: rgba(255,255,255,0.15); padding: 15px; border-radius: 20px;
+        }
+        .summary-item { flex: 1; text-align: left; padding: 0 10px; }
+        .summary-item:first-child { border-right: 1px solid rgba(255,255,255,0.2); }
+        .summary-label { font-size: 0.8rem; font-weight: 700; opacity: 0.9; margin-bottom: 5px; display: flex; align-items:center; gap:5px;}
+        .summary-val { font-size: 1.2rem; font-weight: 800; }
+
+        .trans-tabs {
+            display: flex; background: #edf2f7; border-radius: 20px; margin-bottom: 25px; padding: 6px;
+        }
+        .trans-tab {
+            flex: 1; text-align: center; padding: 12px; border-radius: 16px; cursor: pointer;
+            font-weight: 800; color: #a0aec0; transition: all 0.3s; font-size: 0.95rem;
+        }
+        .trans-tab.active.pengeluaran { background-color: var(--danger); color: white; box-shadow: 0 4px 10px rgba(255, 118, 117, 0.3); }
+        .trans-tab.active.pemasukan { background-color: var(--success); color: white; box-shadow: 0 4px 10px rgba(0, 184, 148, 0.3); }
+        
+        .recent-list { list-style: none; }
+        .recent-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px; margin-bottom: 15px; background: #f8fafc; border-radius: 20px;
+            border: 1px solid #edf2f7; transition: transform 0.2s;
+        }
+        .recent-item:active { transform: scale(0.98); }
+        .ri-info { display: flex; align-items: center; gap: 15px; }
+        .ri-icon {
+            width: 50px; height: 50px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; color: white;
+        }
+        .bg-in { background-color: var(--success); }
+        .bg-out { background-color: var(--danger); }
+        .ri-details h4 { font-size: 1.05rem; font-weight: 800; margin-bottom: 4px; color: var(--text-main);}
+        .ri-details p { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+        .ri-amount { font-weight: 800; font-size: 1.1rem; }
+        .text-in { color: var(--success); }
+        .text-out { color: var(--danger); }
+
+        .wish-card {
+            background: #f8fafc; border: 1px solid #edf2f7; padding: 20px; border-radius: 24px; margin-bottom: 20px;
+        }
+        .wish-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;}
+        .wish-title { font-weight: 800; font-size: 1.1rem; }
+        .wish-progress-container {
+            width: 100%; height: 12px; background-color: #e2e8f0; border-radius: 10px; overflow: hidden; margin: 15px 0;
+        }
+        .wish-progress-bar { height: 100%; background-color: var(--primary-color); border-radius: 10px; width: 0%; transition: width 1s ease-in-out; }
+        .wish-stats { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; color: var(--text-muted); }
+
+        .rem-item {
+            display: flex; align-items: center; padding: 20px; background: #fffbeb;
+            border: 2px solid #fde68a; border-radius: 20px; margin-bottom: 15px;
+        }
+        .rem-icon { font-size: 1.8rem; color: #f59e0b; margin-right: 15px; }
+        .rem-info h4 { font-size: 1.05rem; font-weight: 800; margin-bottom: 5px; color: #92400e; }
+        .rem-info p { font-size: 0.85rem; font-weight: 600; color: #b45309; }
+
+        .bottom-nav {
+            position: sticky; bottom: 0; left: 0; width: 100%;
+            background-color: var(--surface-color); display: flex; justify-content: space-around;
+            padding: 15px 10px; padding-bottom: env(safe-area-inset-bottom, 20px);
+            border-top-left-radius: 30px; border-top-right-radius: 30px;
+            box-shadow: 0 -5px 25px rgba(0,0,0,0.05); z-index: 100;
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; color: #a0aec0;
+            text-decoration: none; font-size: 0.75rem; font-weight: 700; gap: 6px;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; width: 20%;
+        }
+        .nav-item i { font-size: 1.5rem; transition: transform 0.3s; }
+        .nav-item.active { color: var(--primary-color); }
+        .nav-item.active i { transform: translateY(-5px) scale(1.1); }
+
+        .nav-fab {
+            position: relative; top: -30px; width: 65px; height: 65px;
+            background-color: var(--primary-color); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: white;
+            font-size: 1.8rem; box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            border: 6px solid var(--bg-color); transition: transform 0.2s;
+        }
+        .nav-fab:active { transform: scale(0.9); }
+
+        .ai-mascot-container {
+            position: absolute; bottom: 100px; right: 20px; z-index: 90;
+            display: flex; flex-direction: column; align-items: flex-end;
+        }
+        .ai-bubble {
+            background-color: var(--surface-color); padding: 18px; border-radius: 24px;
+            border-bottom-right-radius: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            margin-bottom: 12px; max-width: 280px; font-size: 0.95rem; font-weight: 600; line-height: 1.4;
+            display: none; transform-origin: bottom right; border: 2px solid var(--secondary-color);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        .ai-bubble-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;}
+        .ai-btn {
+            background: #f1f5f9; border: none; padding: 8px 12px; border-radius: 12px;
+            font-size: 0.8rem; font-weight: 800; cursor: pointer; color: var(--primary-color);
+            transition: background 0.2s;
+        }
+        .ai-btn:active { background: #e2e8f0; }
+        @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .ai-mascot {
+            width: 65px; height: 65px; background-color: var(--surface-color);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 2.2rem; box-shadow: 0 8px 20px rgba(0,0,0,0.15); cursor: pointer;
+            border: 4px solid var(--primary-color);
+            animation: float 4s ease-in-out infinite; z-index: 91;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-8px) rotate(-5deg); }
+            75% { transform: translateY(-4px) rotate(5deg); }
+        }
+
+        .auth-page {
+            width: 100%; min-height: 100vh;
+            background-color: var(--bg-color); z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 30px; text-align: center;
+            position: relative;
+        }
+        .login-logo { font-size: 4.5rem; margin-bottom: 15px; animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        .login-title { font-size: 2.5rem; font-weight: 900; color: var(--primary-color); letter-spacing: -1px; margin-bottom: 5px;}
+        .login-subtitle { font-size: 1rem; font-weight: 600; color: var(--text-muted); margin-bottom: 35px;}
+        .login-form { width: 100%; max-width: 340px; background: var(--surface-color); padding: 25px; border-radius: 30px; box-shadow: var(--shadow); }
+
+        .mascot-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;
+            margin: 20px 0; max-height: 50vh; overflow-y: auto; width: 100%; max-width: 350px;
+            padding: 10px;
+        }
+        .mascot-grid::-webkit-scrollbar { display: none; }
+        .mascot-option {
+            background: var(--surface-color); border: 3px solid transparent; border-radius: 20px;
+            padding: 20px 10px; font-size: 2.5rem; cursor: pointer; transition: all 0.2s; box-shadow: var(--shadow);
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+        .mascot-option span { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); }
+        .mascot-option.selected {
+            border-color: var(--primary-color); background: #f8fafc; transform: scale(1.08) translateY(-5px);
+        }
+
+        .hidden { display: none !important; }
+        .text-center { text-align: center; }
+        .mt-20 { margin-top: 20px; }
+        .mb-20 { margin-bottom: 20px; }
+
+        /* Custom Toast Notification (Pengganti Alert) */
+        #toast-container {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 2000; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px;
+        }
+        .toast {
+            background: var(--surface-color); border-left: 6px solid var(--primary-color);
+            color: var(--text-main); padding: 16px 20px; border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2); font-weight: 700; font-size: 0.95rem;
+            animation: slideDownFade 0.3s ease forwards; display: flex; align-items: center; gap: 12px;
+        }
+        .toast-success { border-color: var(--success); }
+        .toast-error { border-color: var(--danger); }
+        .toast i { font-size: 1.2rem; }
+        @keyframes slideDownFade { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Loader Overlay */
+        #loader {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(255,255,255,0.9); z-index: 3000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .loader-icon { font-size: 4rem; animation: pulse 1s infinite alternate; margin-bottom: 15px; }
+        @keyframes pulse { from { transform: scale(0.9); } to { transform: scale(1.1); } }
+
+    </style>
+</head>
+<body class="theme-anjing"> <!-- Default Theme -->
+
+<!-- Thumbnail Blogger Tersembunyi (Minimal SVG) -->
+<div style="display:none;">
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='630'%3E%3Crect fill='%236c5ce7' width='1200' height='630'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='48' font-family='Arial' fill='white' font-weight='bold'%3EFinPaws - Keuangan Asik Gen Z%3C/text%3E%3C/svg%3E" alt="FinPaws Thumbnail">
+</div>
+
+<div class="app-container">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container"></div>
+
+    <!-- LOADER -->
+    <div id="loader" class="hidden">
+        <div class="loader-icon">🐾</div>
+        <h3 style="color: var(--primary-color); font-weight: 900;">Bentar ya ngab...</h3>
+    </div>
+
+    <!-- ==================== HALAMAN LOGIN ==================== -->
+    <div id="loginPage" class="auth-page active">
+        <div class="login-logo">🐾</div>
+        <h1 class="login-title">FinPaws</h1>
+        <p class="login-subtitle">Keuangan Asik, Hidup Anti Panik.</p>
+        
+        <form class="login-form" id="formLogin">
+            <div class="form-group">
+                <input type="text" id="loginUsername" class="form-control" placeholder="Username" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+                <input type="password" id="loginPassword" class="form-control" placeholder="Password" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Gaskeun!</button>
+        </form>
+        <p style="margin-top:25px; font-size:0.85rem; color:var(--text-muted); font-weight:600;">
+            *Mode Preview:<br>Admin (admin / edudigital)<br>Peserta Baru (peserta / edudigital)
+        </p>
+    </div>
+
+    <!-- ==================== HALAMAN SETUP MASKOT (First Time) ==================== -->
+    <div id="setupPage" class="auth-page hidden">
+        <h2 style="margin-bottom: 5px; font-weight:900;">Pilih Partner Kamu!</h2>
+        <p style="font-size:0.95rem; margin-bottom: 15px; font-weight:600; color:var(--text-muted);">Pilih hewan penjaga cuanmu dan kasih nama.</p>
+        
+        <div class="mascot-grid" id="mascotSelection">
+            <div class="mascot-option selected" data-hewan="anjing" data-ikon="🐶" data-tema="theme-anjing">🐶<span>Anjing</span></div>
+            <div class="mascot-option" data-hewan="kucing" data-ikon="🐱" data-tema="theme-kucing">🐱<span>Kucing</span></div>
+            <div class="mascot-option" data-hewan="burunghantu" data-ikon="🦉" data-tema="theme-burunghantu">🦉<span>Owl</span></div>
+            <div class="mascot-option" data-hewan="kelinci" data-ikon="🐰" data-tema="theme-kelinci">🐰<span>Kelinci</span></div>
+            <div class="mascot-option" data-hewan="beruang" data-ikon="🐻" data-tema="theme-beruang">🐻<span>Beruang</span></div>
+            <div class="mascot-option" data-hewan="panda" data-ikon="🐼" data-tema="theme-panda">🐼<span>Panda</span></div>
+            <div class="mascot-option" data-hewan="rubah" data-ikon="🦊" data-tema="theme-rubah">🦊<span>Rubah</span></div>
+            <div class="mascot-option" data-hewan="kurakura" data-ikon="🐢" data-tema="theme-kurakura">🐢<span>Kura</span></div>
+            <div class="mascot-option" data-hewan="penguin" data-ikon="🐧" data-tema="theme-penguin">🐧<span>Penguin</span></div>
+            <div class="mascot-option" data-hewan="koala" data-ikon="🐨" data-tema="theme-koala">🐨<span>Koala</span></div>
+        </div>
+
+        <div class="form-group" style="width: 100%; max-width: 350px;">
+            <input type="text" id="setupMascotName" class="form-control" placeholder="Panggil dia siapa?" required>
+        </div>
+        <button class="btn btn-primary mt-20" id="btnSaveSetup" style="max-width: 350px;">Mulai Petualangan!</button>
+    </div>
+
+    <!-- ==================== HEADER UTAMA APP ==================== -->
+    <div id="mainAppHeader" class="app-header hidden">
+        <div class="app-title">
+            <span id="headerMascotIcon" style="font-size:1.6rem; margin-right:5px;">🐾</span> FinPaws
+        </div>
+        <div class="user-profile" onclick="showToast('Menu Profile (Coming Soon)', 'info')">
+            <span style="font-weight: 800; font-size: 0.95rem; margin-left: 10px;" id="displayUsername">User</span>
+            <div class="user-avatar" id="headerAvatar">👤</div>
+        </div>
+    </div>
+
+    <!-- ==================== AREA KONTEN UTAMA ==================== -->
+    <div id="mainAppContent" class="main-content hidden">
+
+        <!-- DASHBOARD PAGE -->
+        <div id="pageDashboard" class="page">
+            <div class="balance-card">
+                <p class="balance-title">Sisa Uang Bulan Ini</p>
+                <h2 class="balance-amount" id="dashBalance">Rp 0</h2>
+                <div class="summary-row">
+                    <div class="summary-item">
+                        <p class="summary-label"><i class="fa-solid fa-circle-arrow-down val-in"></i> Masuk</p>
+                        <p class="summary-val val-in" id="dashIncome">Rp 0</p>
+                    </div>
+                    <div class="summary-item" style="text-align: right;">
+                        <p class="summary-label" style="justify-content:flex-end;"><i class="fa-solid fa-circle-arrow-up val-out"></i> Keluar</p>
+                        <p class="summary-val val-out" id="dashExpense">Rp 0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="section-title">Gaya Hidupmu <span style="font-size: 1.2rem;">📊</span></h3>
+                <div style="position: relative; height:220px; width:100%; display:flex; justify-content:center;">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+                    <h3 class="section-title" style="margin:0;">Riwayat Jajan</h3>
+                    <span style="font-size:0.85rem; font-weight:800; color:var(--primary-color); cursor:pointer;" onclick="switchPage('pageLaporan')">Lihat Semua</span>
+                </div>
+                <ul class="recent-list" id="dashboardRecentList">
+                    <!-- Data dari JS -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- INPUT TRANSAKSI PAGE -->
+        <div id="pageInput" class="page">
+            <h2 class="mb-20" style="font-weight:900;">Catat Dulu Bos! 📝</h2>
+            
+            <div class="trans-tabs">
+                <div class="trans-tab active pengeluaran" id="tabPengeluaran" onclick="setTxType('pengeluaran')">Uang Keluar</div>
+                <div class="trans-tab" id="tabPemasukan" onclick="setTxType('pemasukan')">Uang Masuk</div>
+            </div>
+
+            <div class="card">
+                <form id="formTransaksi">
+                    <input type="hidden" id="txType" value="pengeluaran">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Tanggal</label>
+                        <input type="date" id="txDate" class="form-control" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Kategori</label>
+                        <select id="txCategory" class="form-control" required>
+                            <!-- Kategori diisi JS -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Nominal (Rp)</label>
+                        <input type="number" id="txAmount" class="form-control" placeholder="Misal: 50000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Buat Apa Tuh?</label>
+                        <input type="text" id="txNote" class="form-control" placeholder="Keterangan jujur..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ada Bukti / Struk? (Opsional)</label>
+                        <div class="file-upload-wrapper">
+                            <button type="button" class="upload-btn-ui">
+                                <i class="fa-solid fa-camera-retro" style="font-size: 2.5rem;"></i>
+                                <span id="fileNameDisplay">Upload / Jepret Struk</span>
+                            </button>
+                            <input type="file" id="txPhoto" accept="image/*" capture="environment">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary mt-20">Simpan Catatan</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- WISHLIST PAGE -->
+        <div id="pageWishlist" class="page">
+            <h2 class="mb-20" style="font-weight:900;">Target Impian 🎯</h2>
+            
+            <div class="card" style="background-color: var(--primary-color); color:white; display:flex; align-items:center; gap:20px; cursor:pointer; border:none;" onclick="toggleAddWishlist()">
+                <div style="background:rgba(255,255,255,0.25); width:50px; height:50px; border-radius:16px; display:flex; justify-content:center; align-items:center; font-size:1.8rem; font-weight:900;">+</div>
+                <div>
+                    <h3 style="font-size:1.15rem; font-weight:800; margin-bottom:4px;">Bikin Target Baru</h3>
+                    <p style="font-size:0.85rem; font-weight:600; opacity:0.9;">Biar nabung makin semangat!</p>
+                </div>
+            </div>
+
+            <!-- Form Add Wishlist -->
+            <div class="card hidden" id="formAddWishlistContainer" style="border: 2px solid var(--primary-color);">
+                <h3 class="mb-20" style="font-weight:800; font-size:1.1rem;">Target Apa Nih?</h3>
+                <form id="formWishlist">
+                    <div class="form-group">
+                        <label class="form-label">Nama Barang / Impian</label>
+                        <input type="text" id="wishName" class="form-control" placeholder="Mis: Nonton Konser" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Butuh Uang Berapa? (Rp)</label>
+                        <input type="number" id="wishTarget" class="form-control" placeholder="Mis: 1500000" required>
+                    </div>
+                    <div style="display:flex; gap:12px;">
+                        <button type="button" class="btn btn-outline" style="flex:1;" onclick="toggleAddWishlist()">Batal</button>
+                        <button type="submit" class="btn btn-primary" style="flex:2;">Simpan</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="wishlistContainer">
+                <!-- Data Wishlist dari JS -->
+            </div>
+        </div>
+
+        <!-- REMINDER PAGE -->
+        <div id="pageReminder" class="page">
+            <h2 class="mb-20" style="font-weight:900;">Jangan Lupa Bestie! ⏰</h2>
+            
+            <div class="card">
+                <h3 class="section-title">Bikin Pengingat</h3>
+                <form id="formReminder">
+                    <div class="form-group">
+                        <input type="text" id="remJudul" class="form-control" placeholder="Mis: Bayar Netflix / Utang si A..." required>
+                    </div>
+                    <div style="display:flex; gap:12px; margin-bottom:20px;">
+                        <select id="remTipe" class="form-control" style="flex:1;">
+                            <option value="Hutang">Hutang</option>
+                            <option value="Piutang">Piutang (Ada yg ngutang)</option>
+                            <option value="Tagihan">Tagihan Rutin</option>
+                        </select>
+                        <input type="date" id="remDate" class="form-control" style="flex:1;" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Set Reminder</button>
+                </form>
+            </div>
+
+            <h3 class="section-title mt-20">Daftar Tanggungan</h3>
+            <div id="reminderContainer">
+                <!-- Data Reminder dari JS -->
+            </div>
+        </div>
+
+        <!-- LAPORAN PAGE -->
+        <div id="pageLaporan" class="page">
+            <h2 class="mb-20" style="font-weight:900;">Laporan Cuan 🖨️</h2>
+            
+            <div class="card">
+                <div style="display:flex; gap:12px; margin-bottom:18px;">
+                    <div style="flex:1">
+                        <label class="form-label" style="font-size:0.8rem;">Dari Tanggal</label>
+                        <input type="date" id="lapMulai" class="form-control" style="padding:12px;">
+                    </div>
+                    <div style="flex:1">
+                        <label class="form-label" style="font-size:0.8rem;">Sampai Tanggal</label>
+                        <input type="date" id="lapSampai" class="form-control" style="padding:12px;">
+                    </div>
+                </div>
+                <div style="display:flex; gap:12px;">
+                    <button class="btn btn-outline" onclick="loadLaporan()" style="flex:1;">Filter</button>
+                    <button class="btn btn-primary" onclick="downloadPDF()" style="flex:1; display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <i class="fa-solid fa-file-pdf"></i> Unduh PDF
+                    </button>
+                </div>
+            </div>
+
+            <div class="card" style="padding:10px;">
+                <ul class="recent-list" id="laporanList" style="margin:0;">
+                    <!-- Data Laporan dari JS -->
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ==================== FINPAWS AI MASCOT (Clippy Style) ==================== -->
+    <div id="aiContainer" class="ai-mascot-container hidden">
+        <div class="ai-bubble" id="aiBubble">
+            <p id="aiMessage">Halo! Aku partner cuanmu. Ada yang bisa dibantu?</p>
+            <div class="ai-bubble-actions">
+                <button class="ai-btn" onclick="aiAsk('resume')">📝 Resume Bulan Ini</button>
+                <button class="ai-btn" onclick="aiAsk('roasting')">🔥 Roasting Keuanganku</button>
+                <button class="ai-btn" onclick="aiAsk('motivasi')">✨ Motivasi Dong</button>
+                <button class="ai-btn" onclick="closeAiBubble()" style="color:var(--danger);">Bhai.</button>
+            </div>
+        </div>
+        <div class="ai-mascot" id="aiMascotIcon" onclick="toggleAiBubble()">🐶</div>
+    </div>
+
+    <!-- ==================== BOTTOM NAVIGATION ==================== -->
+    <div id="bottomNav" class="bottom-nav hidden">
+        <a class="nav-item active" onclick="switchPage('pageDashboard', this)">
+            <i class="fa-solid fa-house-chimney"></i><span>Home</span>
+        </a>
+        <a class="nav-item" onclick="switchPage('pageWishlist', this)">
+            <i class="fa-solid fa-crosshairs"></i><span>Target</span>
+        </a>
+        
+        <!-- FAB for Input -->
+        <a class="nav-item" style="width: auto;" onclick="switchPage('pageInput', this)">
+            <div class="nav-fab"><i class="fa-solid fa-plus"></i></div>
+        </a>
+
+        <a class="nav-item" onclick="switchPage('pageReminder', this)">
+            <i class="fa-solid fa-bell"></i><span>Ingat</span>
+        </a>
+        <a class="nav-item" onclick="switchPage('pageLaporan', this)">
+            <i class="fa-solid fa-receipt"></i><span>Laporan</span>
+        </a>
+    </div>
+
+</div>
+
+<script>
+    // --- KONFIGURASI APLIKASI (VERCEL PRODUCTION) ---
+    const APP_VERSION = '1.0.0';
+    const IS_PREVIEW = true; // Demo mode (set false untuk GAS integration)
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwTztGw-G9IMjWHTwbJK_Fv4SUJbdHeVAFPQnmqkxJks034SY2xBg0uonhY3nplqSfo/exec";
+    const STORAGE_KEY = 'finpaws_data_v1';
+    
+    // --- STATE MANAGEMENT ---
+    let currentUser = null;
+    let transactions = [];
+    let wishlists = [];
+    let reminders = [];
+    let myChart = null;
+    
+    // --- UTILITY: Local Storage Management ---
+    const Storage = {
+        save: () => {
+            try {
+                const data = { currentUser, transactions, wishlists, reminders };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                console.log('✓ Data saved to localStorage');
+            } catch (e) {
+                console.warn('⚠ localStorage unavailable:', e.message);
+            }
+        },
+        load: () => {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    currentUser = parsed.currentUser;
+                    transactions = parsed.transactions || [];
+                    wishlists = parsed.wishlists || [];
+                    reminders = parsed.reminders || [];
+                    console.log('✓ Data loaded from localStorage');
+                    return true;
+                }
+            } catch (e) {
+                console.warn('⚠ Error loading localStorage:', e.message);
+            }
+            return false;
+        },
+        clear: () => {
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+                console.log('✓ Data cleared');
+            } catch (e) {
+                console.warn('⚠ Error clearing localStorage:', e.message);
+            }
+        }
+    };
+    
+    // Kategori Data (Gen Z Edition + UMKM siap pakai)
+    const categories = {
+        pemasukan: ['Gaji', 'Uang Jajan', 'Freelance', 'Jualan', 'Dikasih Orang Tua', 'Lainnya'],
+        pengeluaran: ['Makan Minum', 'Nongkrong/Ngopi', 'Transport/Bensin', 'Belanja/Skincare', 'Kos/Tagihan', 'Kuota Internet', 'Sedekah/Kasih Ortu', 'Lainnya']
+    };
+
+    // --- INISIALISASI AWAL ---
+    document.addEventListener("DOMContentLoaded", () => {
+        console.log(`🐾 FinPaws v${APP_VERSION} - Loading...`);
+        
+        // Load saved data from localStorage
+        Storage.load();
+        
+        // Set default dates
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('txDate').value = today;
+        document.getElementById('lapMulai').value = new Date(new Date().setDate(1)).toISOString().split('T')[0]; 
+        document.getElementById('lapSampai').value = today;
+
+        populateCategories('pengeluaran');
+
+        // File upload custom text
+        const fileInput = document.getElementById('txPhoto');
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                let fileName = e.target.files[0] ? e.target.files[0].name : "Upload / Jepret Struk";
+                if(fileName.length > 20) fileName = fileName.substring(0,17) + "...";
+                document.getElementById('fileNameDisplay').innerText = fileName;
+            });
+        }
+        
+        console.log('✓ FinPaws initialized');
+    });
+    
+    // Save data sebelum user meninggalkan halaman
+    window.addEventListener('beforeunload', () => {
+        Storage.save();
+    });
+
+    // --- FUNGSI TOAST NOTIFICATION (PENGGANTI ALERT) ---
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type === 'success' ? 'toast-success' : 'toast-error'}`;
+        
+        const icon = type === 'success' ? '<i class="fa-solid fa-circle-check" style="color:var(--success)"></i>' : '<i class="fa-solid fa-circle-exclamation" style="color:var(--danger)"></i>';
+        
+        toast.innerHTML = `${icon} <span>${message}</span>`;
+        container.appendChild(toast);
+
+        // Hapus setelah 3 detik
+        setTimeout(() => {
+            toast.style.animation = 'slideDownFade 0.3s ease reverse forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // --- NAVIGASI HALAMAN ---
+    function switchPage(pageId, navElement = null) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+
+        if (navElement && !navElement.classList.contains('nav-fab')) {
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            navElement.classList.add('active');
+        }
+
+        if(pageId === 'pageDashboard') renderDashboard();
+        if(pageId === 'pageWishlist') renderWishlist();
+        if(pageId === 'pageReminder') renderReminders();
+        if(pageId === 'pageLaporan') loadLaporan();
+    }
+
+    function showLoader(show) { document.getElementById('loader').classList.toggle('hidden', !show); }
+
+    function setTxType(type) {
+        document.getElementById('txType').value = type;
+        if(type === 'pengeluaran') {
+            document.getElementById('tabPengeluaran').classList.add('active');
+            document.getElementById('tabPemasukan').classList.remove('active');
+        } else {
+            document.getElementById('tabPemasukan').classList.add('active');
+            document.getElementById('tabPengeluaran').classList.remove('active');
+        }
+        populateCategories(type);
+    }
+
+    function populateCategories(type) {
+        const select = document.getElementById('txCategory');
+        select.innerHTML = '';
+        categories[type].forEach(cat => { select.innerHTML += `<option value="${cat}">${cat}</option>`; });
+    }
+
+    // --- LOGIKA LOGIN ---
+    document.getElementById('formLogin').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const user = document.getElementById('loginUsername').value.trim();
+        const pass = document.getElementById('loginPassword').value.trim();
+
+        showLoader(true);
+
+        if (IS_PREVIEW) {
+            setTimeout(() => {
+                showLoader(false);
+                if (user === 'admin' && pass === 'edudigital') {
+                    // Admin (Sudah setup)
+                    currentUser = { username: user, isNew: false, mascot: { jenis: 'anjing', nama: 'Doggo', ikon: '🐶', tema: 'theme-anjing' } };
+                    Storage.save();
+                    handleLoginSuccess();
+                } else if (user === 'peserta' && pass === 'edudigital') {
+                    // Peserta (Baru, butuh setup)
+                    currentUser = { username: user, isNew: true, mascot: null };
+                    Storage.save();
+                    handleLoginSuccess();
+                } else {
+                    showToast('Username atau Password salah ngab!', 'error');
+                }
+            }, 1000);
+        } else {
+            // Logika GAS Asli
+            google.script.run.withSuccessHandler(res => {
+                showLoader(false);
+                if(res.status === 'success') {
+                    currentUser = res.data;
+                    handleLoginSuccess();
+                } else {
+                    showToast(res.message, 'error');
+                }
+            }).doLogin(user, pass);
+        }
+    });
+
+    function handleLoginSuccess() {
+        document.getElementById('loginPage').classList.remove('active');
+        
+        if (currentUser.isNew || !currentUser.mascot) {
+            document.getElementById('setupPage').classList.remove('hidden');
+            document.getElementById('setupPage').classList.add('active');
+        } else {
+            masukKeApp();
+        }
+    }
+
+    // --- SETUP MASKOT ---
+    let selectedMascot = { hewan: 'anjing', ikon: '🐶', tema: 'theme-anjing' };
+    
+    document.querySelectorAll('.mascot-option').forEach(el => {
+        el.addEventListener('click', function() {
+            document.querySelectorAll('.mascot-option').forEach(m => m.classList.remove('selected'));
+            this.classList.add('selected');
+            selectedMascot = { hewan: this.dataset.hewan, ikon: this.dataset.ikon, tema: this.dataset.tema };
+        });
+    });
+
+    document.getElementById('btnSaveSetup').addEventListener('click', function() {
+        const nama = document.getElementById('setupMascotName').value.trim();
+        if(!nama) return showToast('Kasih nama dulu dong maskotnya!', 'error');
+        
+        selectedMascot.nama = nama;
+        currentUser.mascot = selectedMascot;
+        
+        // Simpan ke Backend jika tidak preview
+        if(!IS_PREVIEW) {
+            try {
+                google.script.run.withSuccessHandler(()=>{
+                     masukKeApp();
+                }).saveUserSetup(currentUser.username, selectedMascot);
+            } catch (e) {
+                console.warn('GAS integration not available, using local storage');
+                masukKeApp();
+            }
+        } else {
+            masukKeApp();
+        }
+    });
+
+    function masukKeApp() {
+        // Terapkan Tema Gen Z
+        if (currentUser && currentUser.mascot) {
+            document.body.className = currentUser.mascot.tema;
+            document.getElementById('setupPage').classList.remove('active');
+            document.getElementById('setupPage').classList.add('hidden');
+
+            document.getElementById('displayUsername').innerText = currentUser.username || 'User';
+            document.getElementById('headerAvatar').innerText = currentUser.mascot.ikon;
+            document.getElementById('headerMascotIcon').innerText = currentUser.mascot.ikon;
+            
+            document.getElementById('aiMascotIcon').innerText = currentUser.mascot.ikon;
+            document.getElementById('aiMessage').innerText = `Halo bestie! Aku ${currentUser.mascot.nama}. Semangat kelola cuan hari ini ya! ✨`;
+
+            document.getElementById('mainAppHeader').classList.remove('hidden');
+            document.getElementById('bottomNav').classList.remove('hidden');
+            document.getElementById('aiContainer').classList.remove('hidden');
+            document.getElementById('mainAppContent').classList.remove('hidden');
+            
+            // Only load dummy data if no transactions exist
+            if(IS_PREVIEW && transactions.length === 0) loadDummyData();
+            Storage.save();
+            switchPage('pageDashboard');
+        }
+    }
+
+    function loadDummyData() {
+        const yyyy_mm = new Date().toISOString().substring(0, 7); // yyyy-mm bulan ini
+        transactions = [
+            { id: 1, tgl: `${yyyy_mm}-05`, tipe: 'pemasukan', kategori: 'Uang Jajan', nominal: 1500000, ket: 'Dari Mamah' },
+            { id: 2, tgl: `${yyyy_mm}-08`, tipe: 'pengeluaran', kategori: 'Nongkrong/Ngopi', nominal: 55000, ket: 'Kopi Kenangan' },
+            { id: 3, tgl: `${yyyy_mm}-10`, tipe: 'pengeluaran', kategori: 'Makan Minum', nominal: 25000, ket: 'Nasgor Depan' }
+        ];
+        wishlists = [ { id: 1, nama: 'Nonton Konser Coldplay', target: 2500000, terkumpul: 500000 } ];
+        reminders = [ { id: 1, judul: 'Bayar Kuota', tipe: 'Tagihan', tgl: `${yyyy_mm}-28` } ];
+    }
+
+    function formatRp(angka) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka); }
+
+    function renderDashboard() {
+        let masuk = 0, keluar = 0;
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const recentHtml = [];
+        const sortedTx = [...transactions].sort((a,b) => new Date(b.tgl) - new Date(a.tgl));
+
+        sortedTx.forEach((tx, index) => {
+            const txDate = new Date(tx.tgl);
+            if(txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
+                if(tx.tipe === 'pemasukan') masuk += Number(tx.nominal);
+                else keluar += Number(tx.nominal);
+            }
+            if(index < 4) {
+                const isMasuk = tx.tipe === 'pemasukan';
+                recentHtml.push(`
+                    <li class="recent-item">
+                        <div class="ri-info">
+                            <div class="ri-icon ${isMasuk ? 'bg-in' : 'bg-out'}">
+                                <i class="fa-solid ${isMasuk ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
+                            </div>
+                            <div class="ri-details">
+                                <h4>${tx.kategori}</h4>
+                                <p>${tx.tgl} • ${tx.ket}</p>
+                            </div>
+                        </div>
+                        <div class="ri-amount ${isMasuk ? 'text-in' : 'text-out'}">
+                            ${isMasuk ? '+' : '-'}${formatRp(tx.nominal)}
+                        </div>
+                    </li>
+                `);
+            }
+        });
+
+        const sisa = masuk - keluar;
+        document.getElementById('dashBalance').innerText = formatRp(sisa);
+        document.getElementById('dashIncome').innerText = formatRp(masuk);
+        document.getElementById('dashExpense').innerText = formatRp(keluar);
+        
+        const listEl = document.getElementById('dashboardRecentList');
+        listEl.innerHTML = recentHtml.length ? recentHtml.join('') : '<p style="text-align:center; color:#aaa; font-weight:700; margin: 20px 0;">Belum ada jajan. Bagus! Nabung terooos.</p>';
+
+        renderChart();
+    }
+
+    function renderChart() {
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        let dataKat = {};
+        transactions.filter(t => t.tipe === 'pengeluaran').forEach(t => { dataKat[t.kategori] = (dataKat[t.kategori] || 0) + Number(t.nominal); });
+
+        const labels = Object.keys(dataKat);
+        const data = Object.values(dataKat);
+        const rootStyles = getComputedStyle(document.body);
+        const colorPrimary = rootStyles.getPropertyValue('--primary-color').trim();
+        const colorSecondary = rootStyles.getPropertyValue('--secondary-color').trim();
+
+        if(myChart) myChart.destroy();
+
+        if(labels.length === 0) {
+             myChart = new Chart(ctx, {
+                type: 'doughnut', data: { labels: ['Aman'], datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }] },
+                options: { maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } }
+            });
+            return;
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: data, backgroundColor: [colorPrimary, colorSecondary, '#55efc4', '#ffeaa7', '#ff7675', '#a29bfe'], borderWidth: 0 }] },
+            options: {
+                maintainAspectRatio: false, cutout: '75%',
+                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { family: 'Nunito', size: 11, weight: '700' } } } }
+            }
+        });
+    }
+
+    // --- INPUT TRANSAKSI ---
+    document.getElementById('formTransaksi').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const tx = {
+            id: Date.now(), tgl: document.getElementById('txDate').value,
+            tipe: document.getElementById('txType').value, kategori: document.getElementById('txCategory').value,
+            nominal: document.getElementById('txAmount').value, ket: document.getElementById('txNote').value
+        };
+
+        const fileInput = document.getElementById('txPhoto');
+        if (fileInput.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                tx.fotoUrl = event.target.result; // Base64
+                saveTx(tx);
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else { saveTx(tx); }
+    });
+
+    function saveTx(tx) {
+        transactions.push(tx);
+        Storage.save(); // Auto-save
+        showToast('Mantap! Catatan berhasil disimpan.', 'success');
+        document.getElementById('formTransaksi').reset();
+        document.getElementById('fileNameDisplay').innerText = "Upload / Jepret Struk";
+        document.getElementById('txDate').value = new Date().toISOString().split('T')[0];
+        switchPage('pageDashboard', document.querySelectorAll('.nav-item')[0]);
+    }
+
+    // --- WISHLIST ---
+    function toggleAddWishlist() { document.getElementById('formAddWishlistContainer').classList.toggle('hidden'); }
+
+    document.getElementById('formWishlist').addEventListener('submit', function(e) {
+        e.preventDefault();
+        wishlists.push({ id: Date.now(), nama: document.getElementById('wishName').value, target: Number(document.getElementById('wishTarget').value), terkumpul: 0 });
+        Storage.save(); // Auto-save
+        toggleAddWishlist(); this.reset(); renderWishlist();
+        showToast('Target baru ditambahkan! Mangat!', 'success');
+    });
+
+    function renderWishlist() {
+        const container = document.getElementById('wishlistContainer');
+        if(wishlists.length === 0) return container.innerHTML = '<p class="text-center text-muted" style="font-weight:700;">Belum ada target impian. Yuk halu dikit gapapa!</p>';
+
+        let html = '';
+        wishlists.forEach(w => {
+            const pct = Math.min(100, Math.round((w.terkumpul / w.target) * 100));
+            html += `
+                <div class="wish-card">
+                    <div class="wish-header">
+                        <span class="wish-title">${w.nama}</span>
+                        <span style="font-size:0.85rem; background:var(--primary-color); color:white; padding:4px 10px; border-radius:12px; font-weight:800;">${pct}%</span>
+                    </div>
+                    <div class="wish-progress-container"><div class="wish-progress-bar" style="width:${pct}%"></div></div>
+                    <div class="wish-stats"><span>Terkumpul: ${formatRp(w.terkumpul)}</span><span>Target: ${formatRp(w.target)}</span></div>
+                    <button class="btn btn-outline" style="padding: 10px; font-size:0.9rem; margin-top:15px;" onclick="tambahTabungan(${w.id})">Nabung Buat Ini 🤑</button>
+                </div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function tambahTabungan(id) {
+        const w = wishlists.find(x => x.id === id);
+        if(!w) return;
+        
+        const val = window.prompt(`Mau masukin berapa ke tabungan ${w.nama}?\n(Nominal dalam Rp)`);
+        if(val && !isNaN(val) && Number(val) > 0) {
+            w.terkumpul += Number(val);
+            transactions.push({ id: Date.now(), tgl: new Date().toISOString().split('T')[0], tipe: 'pengeluaran', kategori: 'Tabungan Impian', nominal: Number(val), ket: `Nabung: ${w.nama}` });
+            Storage.save(); // Auto-save
+            renderWishlist();
+            showToast("Asik! Makin deket sama impian ✨", 'success');
+        }
+    }
+
+    // --- REMINDER ---
+    document.getElementById('formReminder').addEventListener('submit', function(e) {
+        e.preventDefault();
+        reminders.push({ id: Date.now(), judul: document.getElementById('remJudul').value, tipe: document.getElementById('remTipe').value, tgl: document.getElementById('remDate').value });
+        Storage.save(); // Auto-save
+        this.reset(); renderReminders();
+        showToast('Reminder diset. Awas lupa lho!', 'success');
+    });
+
+    function renderReminders() {
+        const container = document.getElementById('reminderContainer');
+        if(reminders.length === 0) return container.innerHTML = '<p class="text-center text-muted" style="font-weight:700;">Aman bosku, gak ada utang/tanggungan!</p>';
+        let html = '';
+        reminders.forEach(r => {
+            html += `<div class="rem-item"><div class="rem-icon"><i class="fa-solid fa-stopwatch"></i></div>
+                    <div class="rem-info"><h4>[${r.tipe}] ${r.judul}</h4><p>Jatuh Tempo: <strong>${r.tgl}</strong></p></div></div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    // --- LAPORAN & PDF ---
+    function loadLaporan() {
+        const mulai = document.getElementById('lapMulai').value;
+        const sampai = document.getElementById('lapSampai').value;
+        const filtered = transactions.filter(t => t.tgl >= mulai && t.tgl <= sampai);
+        const listEl = document.getElementById('laporanList');
+        
+        if(filtered.length === 0) return listEl.innerHTML = '<p class="text-center text-muted mt-20" style="font-weight:700;">Sepi amat, gak ada transaksi.</p>';
+
+        let html = '';
+        filtered.sort((a,b) => new Date(b.tgl) - new Date(a.tgl)).forEach(tx => {
+            const isMasuk = tx.tipe === 'pemasukan';
+            html += `<li class="recent-item">
+                    <div class="ri-info"><div class="ri-details">
+                        <h4 style="font-size:0.95rem;">${tx.tgl} | ${tx.kategori}</h4>
+                        <p>${tx.ket}</p>
+                    </div></div>
+                    <div class="ri-amount ${isMasuk ? 'text-in' : 'text-out'}" style="font-size:0.95rem;">
+                        ${isMasuk ? '+' : '-'}${formatRp(tx.nominal)}
+                    </div></li>`;
+        });
+        listEl.innerHTML = html;
+    }
+
+    function downloadPDF() {
+        showToast('Sedang membuat PDF...', 'info');
+        setTimeout(() => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.text("Laporan Cuan FinPaws", 20, 20);
+            
+            const mulai = document.getElementById('lapMulai').value;
+            const sampai = document.getElementById('lapSampai').value;
+            doc.setFontSize(12); doc.setFont("helvetica", "normal");
+            doc.text(`Periode: ${mulai} s/d ${sampai}`, 20, 30);
+
+            let yPos = 45;
+            const filtered = transactions.filter(t => t.tgl >= mulai && t.tgl <= sampai);
+            
+            if(filtered.length === 0) {
+                doc.text("Tidak ada data transaksi.", 20, yPos);
+            } else {
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.text("TANGGAL", 20, yPos); doc.text("KATEGORI", 50, yPos); doc.text("KETERANGAN", 90, yPos); doc.text("NOMINAL", 160, yPos);
+                yPos += 8; doc.setFont("helvetica", "normal");
+
+                filtered.forEach(tx => {
+                    const tanda = tx.tipe === 'pemasukan' ? '+' : '-';
+                    doc.text(tx.tgl, 20, yPos); doc.text(tx.kategori.substring(0, 15), 50, yPos);
+                    doc.text(tx.ket.substring(0, 30), 90, yPos); doc.text(`${tanda} ${tx.nominal}`, 160, yPos);
+                    yPos += 8;
+                    if(yPos > 280) { doc.addPage(); yPos = 20; }
+                });
+            }
+            doc.save(`FinPaws_Laporan_${mulai}.pdf`);
+            showToast('PDF berhasil diunduh!', 'success');
+        }, 800);
+    }
+
+    // --- AI MASCOT LOGIC (Gen Z Style) ---
+    function toggleAiBubble() {
+        const bubble = document.getElementById('aiBubble');
+        bubble.style.display = bubble.style.display === 'block' ? 'none' : 'block';
+    }
+    function closeAiBubble() { document.getElementById('aiBubble').style.display = 'none'; }
+
+    function aiAsk(tipe) {
+        const msgEl = document.getElementById('aiMessage');
+        const nama = currentUser.mascot ? currentUser.mascot.nama : 'Bot';
+
+        msgEl.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Bentar ngab, ${nama} lagi mikir...`;
+
+        setTimeout(() => {
+            if(tipe === 'resume') {
+                let masuk = 0, keluar = 0; const currentMonth = new Date().getMonth();
+                transactions.forEach(tx => {
+                    if(new Date(tx.tgl).getMonth() === currentMonth) {
+                        if(tx.tipe === 'pemasukan') masuk += Number(tx.nominal); else keluar += Number(tx.nominal);
+                    }
+                });
+                const sisa = masuk - keluar;
+                let respon = `Bulan ini lu dapet ${formatRp(masuk)} dan udah jajan ${formatRp(keluar)}. `;
+                if(sisa > 0) respon += `Sisa ${formatRp(sisa)}. GG gaming! Nabungin gih dikit. 📈`;
+                else if(sisa < 0) respon += `Waduh, lu tekor ${formatRp(Math.abs(sisa))} nih! Ngerem jajan seblak dulu ya ngab! 😭💸`;
+                else respon += `Loh, saldomu ngepas 0. Agak ngeri-ngeri sedap ya bestie. 🗿`;
+                msgEl.innerText = respon;
+            } 
+            else if(tipe === 'roasting') {
+                const roasts = [
+                    "Ngopi di kafe elit, bayar kos sulit. Kurang-kurangin flexing ya! ☕",
+                    "Keranjang oren lu udah numpuk tuh. Yakin mau di-checkout semua? Inget saldo! 🛒",
+                    "Gaji numpang lewat doang tiap bulan. Lu kerja apa magang? Canda magang! ✌️",
+                    "Kalo lu nanya kenapa duit lu abis, mending ngaca deh. Wkwk. 😭"
+                ];
+                msgEl.innerText = roasts[Math.floor(Math.random() * roasts.length)];
+            }
+            else if(tipe === 'motivasi') {
+                const quotes = [
+                    "Kerja keras bagai quda, biar bisa nonton konser oppa di VIP! ✨",
+                    "Gapapa capek sekarang, yang penting besok bisa glowing! 💅",
+                    "Sedikit demi sedikit lama-lama jadi bukit. Asal jangan bukit utang ya! 🏔️",
+                    "Fokus cari cuan, abaikan omongan tetangga! 🔥"
+                ];
+                msgEl.innerText = quotes[Math.floor(Math.random() * quotes.length)];
+            }
+        }, 1500); 
+    }
+
+</script>
+</body>
+</html>

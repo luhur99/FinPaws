@@ -1,0 +1,31 @@
+{
+  "name": "finpaws",
+  "version": "1.0.0",
+  "description": "FinPaws - Keuangan Asik Gen Z Edition. Personal finance management app with animal mascot themes.",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "build": "echo 'Static site, no build needed'",
+    "start": "python -m http.server 8080"
+  },
+  "keywords": [
+    "finance",
+    "budget",
+    "personal-finance",
+    "gen-z",
+    "indonesian"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": "",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
